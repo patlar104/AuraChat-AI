@@ -1,0 +1,16 @@
+{
+  "recommendations": [
+    // Kotlin & Android
+    "fwcd.kotlin",
+    "mathiasfrohlich.Kotlin",
+    "ms-vscode.gradle-for-java",
+    "vscjava.vscode-gradle",
+    // General dev quality
+    "eamodio.gitlens",
+    "esbenp.prettier-vscode",
+    "visualstudioexptteam.vscodeintellicode",
+    "streetsidesoftware.code-spell-checker",
+    // Docker
+    "ms-azuretools.vscode-docker"
+  ]
+}

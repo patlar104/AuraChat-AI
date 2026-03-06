@@ -1,0 +1,34 @@
+{
+  // Kotlin
+  "kotlin.languageServer.enabled": true,
+  "kotlin.debugAdapter.enabled": true,
+  "kotlin.compiler.jvm.target": "11",
+
+  // Gradle
+  "java.import.gradle.enabled": true,
+  "java.import.gradle.wrapper.enabled": true,
+  "gradle.nestedProjects": true,
+
+  // Editor
+  "editor.tabSize": 4,
+  "editor.insertSpaces": true,
+  "editor.formatOnSave": true,
+  "editor.defaultFormatter": "esbenp.prettier-vscode",
+  "[kotlin]": {
+    "editor.defaultFormatter": "fwcd.kotlin"
+  },
+
+  // File exclusions (keep explorer clean)
+  "files.exclude": {
+    "**/.gradle": true,
+    "**/build": true,
+    "**/.idea": false
+  },
+
+  // Search exclusions (speed up search)
+  "search.exclude": {
+    "**/.gradle": true,
+    "**/build": true,
+    "**/gradle/wrapper": true
+  }
+}

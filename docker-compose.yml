@@ -1,0 +1,25 @@
+version: "3.9"
+
+services:
+  # ── Build the APK (debug) ──────────────────────────
+  build:
+    build: .
+    volumes:
+      - .:/project
+      - gradle-cache:/root/.gradle   # cache Gradle downloads between runs
+    environment:
+      - GEMINI_API_KEY=${GEMINI_API_KEY}   # pass from your shell env
+    command: ./gradlew assembleDebug
+
+  # ── Run unit tests ────────────────────────────────
+  test:
+    build: .
+    volumes:
+      - .:/project
+      - gradle-cache:/root/.gradle
+    environment:
+      - GEMINI_API_KEY=${GEMINI_API_KEY}
+    command: ./gradlew test
+
+volumes:
+  gradle-cache:
