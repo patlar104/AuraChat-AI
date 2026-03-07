@@ -31,6 +31,7 @@ import androidx.compose.ui.Modifier
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
+import com.aurachat.presentation.home.HomeScreen
 import com.aurachat.ui.theme.AuraChatTheme
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.launch
@@ -95,7 +96,7 @@ class MainActivity : ComponentActivity() {
                                         }
                                     }
                                 },
-                                colors = TopAppBarDefaults.centerAlignedTopAppBarColors(
+                                colors = TopAppBarDefaults.topAppBarColors(
                                     containerColor = MaterialTheme.colorScheme.background,
                                     titleContentColor = MaterialTheme.colorScheme.onBackground,
                                     navigationIconContentColor = MaterialTheme.colorScheme.onBackground,
@@ -109,7 +110,13 @@ class MainActivity : ComponentActivity() {
                             startDestination = NavRoutes.HOME,
                             modifier = Modifier.padding(innerPadding),
                         ) {
-                            composable(NavRoutes.HOME) { HomePlaceholder() }
+                            composable(NavRoutes.HOME) {
+                                HomeScreen(
+                                    onNavigateToChat = { sessionId ->
+                                        navController.navigate(NavRoutes.chat(sessionId))
+                                    },
+                                )
+                            }
                             composable(NavRoutes.CHAT) { ChatPlaceholder() }
                             composable(NavRoutes.SETTINGS) { SettingsPlaceholder() }
                         }
@@ -121,13 +128,6 @@ class MainActivity : ComponentActivity() {
 }
 
 // ── Phase placeholders — replaced when each feature phase is implemented ──────
-
-@Composable
-private fun HomePlaceholder() {
-    Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-        Text("Home — Phase 4", color = androidx.compose.ui.graphics.Color.White)
-    }
-}
 
 @Composable
 private fun ChatPlaceholder() {

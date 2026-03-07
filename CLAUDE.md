@@ -37,16 +37,16 @@ PRD: `/Users/patricklarocque/Downloads/AuraChat_PRD.docx`
 
 ## Build Status by Phase
 - Phase 1 ✅ — Theme (Color/Type/Theme.kt), MainActivity with NavHost + ModalNavigationDrawer
-- Phase 2 ⬜ — Room entities, DAOs, Database, Repository
-- Phase 3 ⬜ — GeminiDataSource + streaming Flow
-- Phase 4 ⬜ — HomeScreen + HomeViewModel
+- Phase 2 ✅ — Room entities, DAOs, Database, Repository
+- Phase 3 ✅ — GeminiDataSource + streaming Flow
+- Phase 4 ✅ — HomeScreen + HomeViewModel
 - Phase 5 ⬜ — ChatScreen, ChatViewModel, streaming, MessageBubble
 - Phase 6 ⬜ — DrawerContent, HistoryViewModel, swipe-to-delete
 - Phase 7 ⬜ — SettingsScreen, EncryptedSharedPreferences, DataStore
 - Phase 8 ⬜ — Animations, error handling, polish
 
 ## Nav Routes (MainActivity.kt — NavRoutes object)
-- `home` → HomePlaceholder (Phase 4 will replace)
+- `home` → HomeScreen ✅
 - `chat/{sessionId}` → ChatPlaceholder (Phase 5 will replace)
 - `settings` → SettingsPlaceholder (Phase 7 will replace)
 

@@ -1,3 +1,4 @@
+import java.io.File
 import java.util.Properties
 
 plugins {
@@ -10,7 +11,7 @@ plugins {
 
 // Load local.properties to expose user's API key via BuildConfig (used in Settings screen)
 val localProperties = Properties()
-val localPropertiesFile = rootProject.file("local.properties")
+val localPropertiesFile: File = rootProject.file("local.properties")
 if (localPropertiesFile.exists()) {
 	localPropertiesFile.inputStream().use { localProperties.load(it) }
 }
@@ -55,20 +56,26 @@ android {
 		targetCompatibility = JavaVersion.VERSION_11
 	}
 
-	kotlinOptions {
-		jvmTarget = "11"
-	}
-
 	buildFeatures {
 		compose = true
 		buildConfig = true
 	}
 }
 
+// Project-level Kotlin toolchain — must be at top-level (Project receiver), not inside android {}
+kotlin {
+	jvmToolchain(11)
+}
+
+ksp {
+	arg("room.schemaLocation", "$projectDir/schemas")
+}
+
 dependencies {
 	// AndroidX Core
 	implementation(libs.androidx.core.ktx)
 	implementation(libs.androidx.lifecycle.runtime.ktx)
+	implementation(libs.androidx.lifecycle.runtime.compose)
 	implementation(libs.androidx.lifecycle.viewmodel.compose)
 	implementation(libs.androidx.activity.compose)
 
@@ -78,6 +85,7 @@ dependencies {
 	implementation(libs.androidx.compose.ui.graphics)
 	implementation(libs.androidx.compose.ui.tooling.preview)
 	implementation(libs.androidx.compose.material3)
+	implementation(libs.androidx.compose.material.icons.core)
 
 	// Navigation
 	implementation(libs.androidx.navigation.compose)
