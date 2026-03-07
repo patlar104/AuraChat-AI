@@ -5,7 +5,7 @@
 #   docker run --rm -v $(pwd):/project aurachat-build ./gradlew assembleDebug
 # ─────────────────────────────────────────────
 
-FROM eclipse-temurin:17-jdk-jammy
+FROM eclipse-temurin:21-jdk-jammy
 
 # Build args (override with --build-arg)
 ARG ANDROID_SDK_VERSION=commandlinetools-linux-11076708_latest.zip

@@ -1,0 +1,71 @@
+{
+  "name": "AuraChat Android Dev",
+
+  // Build from the project-root Dockerfile (eclipse-temurin:21-jdk + Android SDK)
+  "build": {
+    "context": "..",
+    "dockerfile": "../Dockerfile"
+  },
+
+  // Environment variables — set GEMINI_API_KEY as a Codespace secret
+  // (Settings → Codespaces → Secrets) and it will be injected here automatically.
+  "remoteEnv": {
+    "ANDROID_HOME": "/opt/android-sdk",
+    "ANDROID_SDK_ROOT": "/opt/android-sdk",
+    "PATH": "/opt/android-sdk/cmdline-tools/latest/bin:/opt/android-sdk/platform-tools:${containerEnv:PATH}",
+    "GEMINI_API_KEY": "${localEnv:GEMINI_API_KEY}"
+  },
+
+  // Run setup script after the container is created
+  "postCreateCommand": "bash .devcontainer/setup.sh",
+
+  // VS Code extensions installed automatically in the Codespace
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        // Kotlin language server (syntax, completion, diagnostics)
+        "fwcd.kotlin",
+        // Gradle project import + build
+        "vscjava.vscode-gradle",
+        // General Android/Java support
+        "redhat.java",
+        // Git supercharge
+        "eamodio.gitlens",
+        // Spell checker
+        "streetsidesoftware.code-spell-checker",
+        // Docker compose helper
+        "ms-azuretools.vscode-docker",
+        // GitHub Copilot (optional — needs license)
+        "github.copilot"
+      ],
+      "settings": {
+        "kotlin.languageServer.enabled": true,
+        "kotlin.debugAdapter.enabled": true,
+        "kotlin.compiler.jvm.target": "11",
+        "java.import.gradle.enabled": true,
+        "java.import.gradle.wrapper.enabled": true,
+        "gradle.nestedProjects": true,
+        "editor.tabSize": 4,
+        "editor.insertSpaces": true,
+        "editor.formatOnSave": true,
+        "[kotlin]": {
+          "editor.defaultFormatter": "fwcd.kotlin"
+        },
+        "files.exclude": {
+          "**/.gradle": true,
+          "**/build": true
+        },
+        "search.exclude": {
+          "**/.gradle": true,
+          "**/build": true,
+          "**/gradle/wrapper": true
+        }
+      }
+    }
+  },
+
+  // Persist the Gradle cache across rebuilds
+  "mounts": [
+    "source=aurachat-gradle-cache,target=/root/.gradle,type=volume"
+  ]
+}
