@@ -8,7 +8,9 @@
       "Glob(*)",
       "Grep(*)",
       "mcp__Desktop_Commander__*",
-      "mcp__Context7__*"
+      "mcp__Context7__*",
+      "Skill(commit-commands:commit-push-pr)",
+      "Skill(commit-commands:commit-push-pr:*)"
     ]
   }
 }
