@@ -28,9 +28,12 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
+import androidx.navigation.navArgument
+import com.aurachat.presentation.chat.ChatScreen
 import com.aurachat.presentation.home.HomeScreen
 import com.aurachat.ui.theme.AuraChatTheme
 import dagger.hilt.android.AndroidEntryPoint
@@ -117,7 +120,16 @@ class MainActivity : ComponentActivity() {
                                     },
                                 )
                             }
-                            composable(NavRoutes.CHAT) { ChatPlaceholder() }
+                            composable(
+                                route = NavRoutes.CHAT,
+                                arguments = listOf(
+                                    navArgument("sessionId") { type = NavType.LongType }
+                                ),
+                            ) {
+                                // sessionId is automatically injected into ChatViewModel
+                                // via SavedStateHandle by Hilt + Navigation Compose
+                                ChatScreen()
+                            }
                             composable(NavRoutes.SETTINGS) { SettingsPlaceholder() }
                         }
                     }
@@ -128,13 +140,6 @@ class MainActivity : ComponentActivity() {
 }
 
 // ── Phase placeholders — replaced when each feature phase is implemented ──────
-
-@Composable
-private fun ChatPlaceholder() {
-    Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-        Text("Chat — Phase 5", color = androidx.compose.ui.graphics.Color.White)
-    }
-}
 
 @Composable
 private fun SettingsPlaceholder() {

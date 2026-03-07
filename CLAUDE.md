@@ -33,22 +33,27 @@ PRD: `/Users/patricklarocque/Downloads/AuraChat_PRD.docx`
 - `presentation/history/` — DrawerContent, HistoryViewModel
 - `presentation/settings/` — SettingsScreen, SettingsViewModel
 - `ui/theme/` — Color.kt, Type.kt, Theme.kt
-- `ui/components/` — shared composables
+- `ui/components/` — shared composables (MessageBubble)
 
 ## Build Status by Phase
 - Phase 1 ✅ — Theme (Color/Type/Theme.kt), MainActivity with NavHost + ModalNavigationDrawer
 - Phase 2 ✅ — Room entities, DAOs, Database, Repository
-- Phase 3 ✅ — GeminiDataSource + streaming Flow
-- Phase 4 ✅ — HomeScreen + HomeViewModel
-- Phase 5 ⬜ — ChatScreen, ChatViewModel, streaming, MessageBubble
+- Phase 3 ✅ — GeminiDataSource + streaming Flow + SendMessageUseCase
+- Phase 4 ✅ — HomeScreen + HomeViewModel (suggestion chips, HomeInputBar, navigateToSessionId nav)
+- Phase 5 ✅ — ChatScreen, ChatViewModel, streaming bubble, MessageBubble
 - Phase 6 ⬜ — DrawerContent, HistoryViewModel, swipe-to-delete
 - Phase 7 ⬜ — SettingsScreen, EncryptedSharedPreferences, DataStore
 - Phase 8 ⬜ — Animations, error handling, polish
 
 ## Nav Routes (MainActivity.kt — NavRoutes object)
 - `home` → HomeScreen ✅
-- `chat/{sessionId}` → ChatPlaceholder (Phase 5 will replace)
+- `chat/{sessionId}` → ChatScreen ✅ (Long arg via NavType.LongType + SavedStateHandle)
 - `settings` → SettingsPlaceholder (Phase 7 will replace)
+
+## Streaming Handoff Pattern (Phase 5)
+- `streamingText: String?` in ChatUiState — null = no stream, `""` = started, non-empty = live text
+- `observeMessages()` clears `streamingText` atomically with Room emission: `if (state.isStreaming) state.streamingText else null`
+- This works because `Dispatchers.Main.immediate` guarantees `isStreaming = false` runs before Room's queued notification fires
 
 ## AMOLED Color Palette
 | Token | Hex | Usage |
