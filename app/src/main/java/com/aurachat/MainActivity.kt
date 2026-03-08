@@ -67,8 +67,10 @@ class MainActivity : ComponentActivity() {
                         ModalDrawerSheet {
                             DrawerContent(
                                 onNavigateToSession = { sessionId ->
-                                    scope.launch { drawerState.close() }
-                                    navController.navigate(NavRoutes.chat(sessionId))
+                                    scope.launch {
+                                        drawerState.close()
+                                        navController.navigate(NavRoutes.chat(sessionId))
+                                    }
                                 },
                             )
                         }
@@ -153,12 +155,5 @@ class MainActivity : ComponentActivity() {
 private fun SettingsPlaceholder() {
     Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
         Text("Settings — Phase 7", color = androidx.compose.ui.graphics.Color.White)
-    }
-}
-
-@Composable
-private fun DrawerPlaceholder() {
-    Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-        Text("Drawer — Phase 6", color = androidx.compose.ui.graphics.Color.White)
     }
 }

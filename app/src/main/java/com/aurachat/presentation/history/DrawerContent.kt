@@ -25,7 +25,6 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -79,11 +78,14 @@ private fun SwipeToDeleteSessionItem(
     onDelete: () -> Unit,
     onClick: () -> Unit,
 ) {
-    val dismissState = rememberSwipeToDismissBoxState()
+    val dismissState = rememberSwipeToDismissBoxState(
+        // Only allow end-to-start swipe (right-to-left) to reveal the delete action
+        confirmValueChange = { it == SwipeToDismissBoxValue.EndToStart },
+    )
 
-    // Trigger delete after the swipe animation settles
+    // Trigger delete after the swipe animation settles to EndToStart
     LaunchedEffect(dismissState.currentValue) {
-        if (dismissState.currentValue != SwipeToDismissBoxValue.Settled) {
+        if (dismissState.currentValue == SwipeToDismissBoxValue.EndToStart) {
             onDelete()
         }
     }
@@ -101,7 +103,7 @@ private fun SwipeToDeleteSessionItem(
                 Icon(
                     imageVector = Icons.Default.Delete,
                     contentDescription = "Delete session",
-                    tint = Color.White,
+                    tint = MaterialTheme.colorScheme.error,
                 )
             }
         },
