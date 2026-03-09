@@ -64,24 +64,19 @@ class SaveMessageUseCaseTest {
         coVerify { repository.saveMessage(message) }
     }
 
-    @Test
-    fun `invoke saves message with empty content`() = runTest {
+    @Test(expected = com.aurachat.domain.error.DomainError.ValidationError::class)
+    fun `invoke throws ValidationError for empty content`() = runTest {
         // Given: Message with empty content
-        val expectedId = 789L
         val message = ChatMessage(
             sessionId = 3L,
             content = "",
             role = MessageRole.USER,
             timestamp = 3000L
         )
-        coEvery { repository.saveMessage(message) } returns expectedId
 
         // When: Invoke use case
-        val result = useCase(message)
-
-        // Then: Should save empty message and return ID
-        assertEquals(expectedId, result)
-        coVerify { repository.saveMessage(message) }
+        // Then: Should throw ValidationError
+        useCase(message)
     }
 
     @Test

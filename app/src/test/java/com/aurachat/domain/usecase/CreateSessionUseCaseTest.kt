@@ -51,19 +51,14 @@ class CreateSessionUseCaseTest {
         coVerify { repository.createSession(customTitle) }
     }
 
-    @Test
-    fun `invoke creates session with empty title`() = runTest {
-        // Given: Repository returns generated ID
-        val expectedId = 789L
+    @Test(expected = com.aurachat.domain.error.DomainError.ValidationError::class)
+    fun `invoke throws ValidationError for empty title`() = runTest {
+        // Given: Empty title
         val emptyTitle = ""
-        coEvery { repository.createSession(emptyTitle) } returns expectedId
 
         // When: Invoke use case with empty title
-        val result = useCase(emptyTitle)
-
-        // Then: Should create session with empty title and return ID
-        assertEquals(expectedId, result)
-        coVerify { repository.createSession(emptyTitle) }
+        // Then: Should throw ValidationError
+        useCase(emptyTitle)
     }
 
     @Test

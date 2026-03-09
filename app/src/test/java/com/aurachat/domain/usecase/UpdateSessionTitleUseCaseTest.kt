@@ -35,18 +35,15 @@ class UpdateSessionTitleUseCaseTest {
         coVerify { repository.updateSessionTitle(sessionId, newTitle) }
     }
 
-    @Test
-    fun `invoke updates session with empty title`() = runTest {
+    @Test(expected = com.aurachat.domain.error.DomainError.ValidationError::class)
+    fun `invoke throws ValidationError for empty title`() = runTest {
         // Given: Empty title
         val sessionId = 456L
         val emptyTitle = ""
-        coEvery { repository.updateSessionTitle(sessionId, emptyTitle) } returns Unit
 
         // When: Invoke use case
+        // Then: Should throw ValidationError
         useCase(sessionId, emptyTitle)
-
-        // Then: Should call repository with empty title
-        coVerify { repository.updateSessionTitle(sessionId, emptyTitle) }
     }
 
     @Test
