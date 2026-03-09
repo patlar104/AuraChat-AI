@@ -2,6 +2,7 @@ package com.aurachat.presentation.home
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.aurachat.domain.error.DomainError
 import com.aurachat.domain.usecase.CreateSessionUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -55,6 +56,17 @@ class HomeViewModel @Inject constructor(
                         navigateToSessionId = sessionId,
                         inputText = "",
                     )
+                }
+            } catch (e: DomainError) {
+                val errorMessage = when (e) {
+                    is DomainError.DatabaseError -> "Failed to create chat session. Please try again."
+                    is DomainError.NetworkError -> "Network error. Please check your connection."
+                    is DomainError.ApiError -> "AI service error. Please try again."
+                    is DomainError.ValidationError -> e.message
+                    is DomainError.UnknownError -> "Failed to start chat. Please try again."
+                }
+                _uiState.update {
+                    it.copy(isCreatingSession = false, errorMessage = errorMessage)
                 }
             } catch (e: Exception) {
                 _uiState.update {

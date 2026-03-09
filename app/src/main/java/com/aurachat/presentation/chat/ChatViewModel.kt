@@ -3,6 +3,7 @@ package com.aurachat.presentation.chat
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.aurachat.domain.error.DomainError
 import com.aurachat.domain.usecase.GetMessagesUseCase
 import com.aurachat.domain.usecase.SendMessageUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -102,6 +103,21 @@ class ChatViewModel @Inject constructor(
                     state.copy(isStreaming = false)
                 }
 
+            } catch (e: DomainError) {
+                val errorMessage = when (e) {
+                    is DomainError.DatabaseError -> "Failed to save message. Please try again."
+                    is DomainError.NetworkError -> "Network error. Please check your connection."
+                    is DomainError.ApiError -> "AI service error. Please try again."
+                    is DomainError.ValidationError -> e.message
+                    is DomainError.UnknownError -> "Something went wrong. Please try again."
+                }
+                _uiState.update { state ->
+                    state.copy(
+                        isStreaming = false,
+                        streamingText = null,
+                        errorMessage = errorMessage,
+                    )
+                }
             } catch (e: Exception) {
                 _uiState.update { state ->
                     state.copy(
