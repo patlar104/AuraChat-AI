@@ -5,9 +5,21 @@ import com.aurachat.domain.repository.ChatRepository
 import timber.log.Timber
 import javax.inject.Inject
 
+/**
+ * Use case that deletes a chat session and all its associated messages.
+ *
+ * Delegates to the repository to handle cascade deletion of messages and session metadata.
+ * Provides error handling and logging for database operations.
+ */
 class DeleteSessionUseCase @Inject constructor(
     private val repository: ChatRepository
 ) {
+    /**
+     * Deletes the specified chat session and all its messages.
+     *
+     * @param sessionId The ID of the session to delete
+     * @throws DomainError.DatabaseError if the operation fails
+     */
     suspend operator fun invoke(sessionId: Long) {
         Timber.d("DeleteSessionUseCase invoked for sessionId=$sessionId")
 

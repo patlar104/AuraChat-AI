@@ -5,9 +5,23 @@ import com.aurachat.domain.repository.ChatRepository
 import timber.log.Timber
 import javax.inject.Inject
 
+/**
+ * Use case that updates the title of an existing chat session.
+ *
+ * Validates that the title is not blank and delegates to the repository for persistence.
+ * Used for manual title edits and automatic titling from the first user message.
+ */
 class UpdateSessionTitleUseCase @Inject constructor(
     private val repository: ChatRepository
 ) {
+    /**
+     * Updates the title of the specified chat session.
+     *
+     * @param sessionId The ID of the session to update
+     * @param title The new title for the session
+     * @throws DomainError.ValidationError if the title is blank
+     * @throws DomainError.DatabaseError if the operation fails
+     */
     suspend operator fun invoke(sessionId: Long, title: String) {
         Timber.d("UpdateSessionTitleUseCase invoked for sessionId=$sessionId, title='$title'")
 

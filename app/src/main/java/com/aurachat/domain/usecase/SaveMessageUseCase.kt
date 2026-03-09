@@ -6,10 +6,24 @@ import com.aurachat.domain.repository.ChatRepository
 import timber.log.Timber
 import javax.inject.Inject
 
+/**
+ * Use case that persists a chat message and updates session metadata.
+ *
+ * Validates that the message content is not blank and delegates to the repository
+ * for persistence. The repository also updates the session's updatedAt timestamp
+ * and preview text to keep the session list in sync.
+ */
 class SaveMessageUseCase @Inject constructor(
     private val repository: ChatRepository
 ) {
-    /** Persists a completed message and syncs session metadata. Returns the generated message ID. */
+    /**
+     * Persists a chat message and syncs session metadata.
+     *
+     * @param message The message to save (USER or MODEL role)
+     * @return The ID of the saved message
+     * @throws DomainError.ValidationError if the message content is blank
+     * @throws DomainError.DatabaseError if the operation fails
+     */
     suspend operator fun invoke(message: ChatMessage): Long {
         Timber.d("SaveMessageUseCase invoked for sessionId=${message.sessionId}, role=${message.role}")
 

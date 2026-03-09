@@ -20,6 +20,16 @@ import kotlinx.coroutines.launch
 import timber.log.Timber
 import javax.inject.Inject
 
+/**
+ * ViewModel for the Chat screen that manages message sending, streaming, and display.
+ *
+ * Handles real-time message streaming from Gemini AI, manages the chat message history,
+ * and coordinates the streaming handoff pattern to prevent UI flickering. Observes messages
+ * from the repository and provides error handling for the send/receive flow.
+ *
+ * The streaming handoff ensures smooth transitions between streaming and persisted messages
+ * by atomically updating both message list and streaming state when Room emits updates.
+ */
 @HiltViewModel
 class ChatViewModel @Inject constructor(
     savedStateHandle: SavedStateHandle,
@@ -68,11 +78,22 @@ class ChatViewModel @Inject constructor(
 
     // ── User interactions ─────────────────────────────────────────────────────
 
+    /**
+     * Updates the input text state as the user types and clears any error state.
+     *
+     * @param text The current input text from the text field
+     */
     fun onInputChanged(text: String) {
         Timber.d("Input changed: ${text.take(20)}${if (text.length > 20) "..." else ""}")
         _uiState.update { it.copy(inputText = text, errorMessageResId = null) }
     }
 
+    /**
+     * Handles the send button click, initiating the message send and stream flow.
+     *
+     * Validates that the input is not blank and that a message is not already streaming.
+     * Clears the input field and starts the streaming process for the AI response.
+     */
     fun onSendClicked() {
         val prompt = _uiState.value.inputText.trim()
         if (prompt.isBlank() || _uiState.value.isStreaming) {
@@ -83,6 +104,11 @@ class ChatViewModel @Inject constructor(
         startSend(prompt)
     }
 
+    /**
+     * Clears the error state to allow the user to retry sending a message.
+     *
+     * Should be called when the user taps the retry button after a send failure.
+     */
     fun onRetryClicked() {
         Timber.d("Retry clicked, clearing error state")
         _uiState.update { it.copy(errorMessageResId = null) }

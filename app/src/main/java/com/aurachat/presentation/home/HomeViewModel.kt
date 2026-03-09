@@ -14,6 +14,13 @@ import kotlinx.coroutines.launch
 import timber.log.Timber
 import javax.inject.Inject
 
+/**
+ * ViewModel for the Home screen that manages chat session creation.
+ *
+ * Handles user input, suggestion chips, and orchestrates the creation of new chat sessions
+ * with automatic navigation to the newly created session. Provides error handling and
+ * loading state management for the session creation flow.
+ */
 @HiltViewModel
 class HomeViewModel @Inject constructor(
     private val createSession: CreateSessionUseCase,
@@ -26,11 +33,22 @@ class HomeViewModel @Inject constructor(
         Timber.d("HomeViewModel initialized")
     }
 
+    /**
+     * Updates the input text state as the user types.
+     *
+     * @param text The current input text from the text field
+     */
     fun onInputChanged(text: String) {
         Timber.d("Input changed: ${text.take(20)}${if (text.length > 20) "..." else ""}")
         _uiState.update { it.copy(inputText = text) }
     }
 
+    /**
+     * Handles the send button click, creating a new session with the current input text.
+     *
+     * Validates that the input is not blank and that a session creation is not already in progress.
+     * On success, navigates to the newly created chat session.
+     */
     fun onSend() {
         val text = _uiState.value.inputText.trim()
         if (text.isBlank() || _uiState.value.isCreatingSession) {
@@ -41,6 +59,14 @@ class HomeViewModel @Inject constructor(
         createSessionAndNavigate(text)
     }
 
+    /**
+     * Handles suggestion chip taps, creating a new session with the suggestion text.
+     *
+     * Validates that a session creation is not already in progress. On success,
+     * navigates to the newly created chat session.
+     *
+     * @param suggestionText The text from the tapped suggestion chip
+     */
     fun onSuggestionTapped(suggestionText: String) {
         if (_uiState.value.isCreatingSession) {
             Timber.d("Suggestion tap ignored: already creating session")
@@ -50,13 +76,23 @@ class HomeViewModel @Inject constructor(
         createSessionAndNavigate(suggestionText)
     }
 
-    /** Called by the composable after it has consumed the navigation event. */
+    /**
+     * Clears the navigation event after the composable has consumed it.
+     *
+     * Should be called by the composable after successfully navigating to the chat screen
+     * to prevent repeated navigation attempts.
+     */
     fun onNavigationConsumed() {
         Timber.d("Navigation event consumed")
         _uiState.update { it.copy(navigateToSessionId = null) }
     }
 
-    /** Called by the composable after the error snackbar is dismissed. */
+    /**
+     * Clears the error state after the user dismisses the error message.
+     *
+     * Should be called by the composable after the error snackbar is dismissed
+     * to clear the error from the UI state.
+     */
     fun onErrorDismissed() {
         Timber.d("Error dismissed")
         _uiState.update { it.copy(errorMessageResId = null) }
