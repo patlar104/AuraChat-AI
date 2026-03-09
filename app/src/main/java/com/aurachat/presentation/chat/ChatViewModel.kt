@@ -3,6 +3,7 @@ package com.aurachat.presentation.chat
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.aurachat.R
 import com.aurachat.domain.error.DomainError
 import com.aurachat.domain.usecase.GetMessagesUseCase
 import com.aurachat.domain.usecase.SendMessageUseCase
@@ -62,7 +63,7 @@ class ChatViewModel @Inject constructor(
     // ── User interactions ─────────────────────────────────────────────────────
 
     fun onInputChanged(text: String) {
-        _uiState.update { it.copy(inputText = text, errorMessage = null) }
+        _uiState.update { it.copy(inputText = text, errorMessageResId = null) }
     }
 
     fun onSendClicked() {
@@ -72,7 +73,7 @@ class ChatViewModel @Inject constructor(
     }
 
     fun onRetryClicked() {
-        _uiState.update { it.copy(errorMessage = null) }
+        _uiState.update { it.copy(errorMessageResId = null) }
     }
 
     // ── Internal send logic ───────────────────────────────────────────────────
@@ -85,7 +86,7 @@ class ChatViewModel @Inject constructor(
                     inputText = "",
                     isStreaming = true,
                     streamingText = "",  // Empty string = bubble visible, no chunks yet
-                    errorMessage = null,
+                    errorMessageResId = null,
                 )
             }
 
@@ -104,18 +105,18 @@ class ChatViewModel @Inject constructor(
                 }
 
             } catch (e: DomainError) {
-                val errorMessage = when (e) {
-                    is DomainError.DatabaseError -> "Failed to save message. Please try again."
-                    is DomainError.NetworkError -> "Network error. Please check your connection."
-                    is DomainError.ApiError -> "AI service error. Please try again."
-                    is DomainError.ValidationError -> e.message
-                    is DomainError.UnknownError -> "Something went wrong. Please try again."
+                val errorMessageResId = when (e) {
+                    is DomainError.DatabaseError -> R.string.error_save_message
+                    is DomainError.NetworkError -> R.string.error_network
+                    is DomainError.ApiError -> R.string.error_api
+                    is DomainError.ValidationError -> R.string.error_unknown
+                    is DomainError.UnknownError -> R.string.error_unknown
                 }
                 _uiState.update { state ->
                     state.copy(
                         isStreaming = false,
                         streamingText = null,
-                        errorMessage = errorMessage,
+                        errorMessageResId = errorMessageResId,
                     )
                 }
             } catch (e: Exception) {
@@ -123,7 +124,7 @@ class ChatViewModel @Inject constructor(
                     state.copy(
                         isStreaming = false,
                         streamingText = null,
-                        errorMessage = e.message ?: "Something went wrong. Please try again.",
+                        errorMessageResId = R.string.error_unknown,
                     )
                 }
             }

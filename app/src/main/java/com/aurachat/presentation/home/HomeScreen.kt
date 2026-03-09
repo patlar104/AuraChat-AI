@@ -36,17 +36,12 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-
-private val SUGGESTION_CHIPS = listOf(
-    "Explain quantum computing simply",
-    "Help me debug this code",
-    "Write a quick Python script",
-    "Summarize the latest AI news",
-)
+import com.aurachat.R
 
 @Composable
 fun HomeScreen(
@@ -55,6 +50,7 @@ fun HomeScreen(
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val snackbarHostState = remember { SnackbarHostState() }
+    val context = androidx.compose.ui.platform.LocalContext.current
 
     // One-shot navigation: fires when navigateToSessionId becomes non-null
     LaunchedEffect(uiState.navigateToSessionId) {
@@ -66,10 +62,10 @@ fun HomeScreen(
     }
 
     // Show error snackbar when session creation fails
-    LaunchedEffect(uiState.errorMessage) {
-        val msg = uiState.errorMessage
-        if (msg != null) {
-            snackbarHostState.showSnackbar(msg)
+    LaunchedEffect(uiState.errorMessageResId) {
+        val resId = uiState.errorMessageResId
+        if (resId != null) {
+            snackbarHostState.showSnackbar(context.getString(resId))
             viewModel.onErrorDismissed()
         }
     }
@@ -83,7 +79,7 @@ fun HomeScreen(
         Spacer(modifier = Modifier.weight(1f))
 
         Text(
-            text = "Hi Patrick, where should we start?",
+            text = stringResource(R.string.home_greeting),
             style = MaterialTheme.typography.titleMedium,
             color = MaterialTheme.colorScheme.onBackground,
             modifier = Modifier.align(Alignment.CenterHorizontally),
@@ -91,11 +87,19 @@ fun HomeScreen(
 
         Spacer(modifier = Modifier.height(24.dp))
 
+        val suggestionChips = listOf(
+            R.string.suggestion_quantum,
+            R.string.suggestion_debug,
+            R.string.suggestion_python,
+            R.string.suggestion_ai_news,
+        )
+
         LazyRow(
             horizontalArrangement = Arrangement.spacedBy(8.dp),
             contentPadding = PaddingValues(horizontal = 0.dp),
         ) {
-            items(SUGGESTION_CHIPS) { suggestion ->
+            items(suggestionChips) { suggestionResId ->
+                val suggestion = stringResource(suggestionResId)
                 SuggestionChip(
                     onClick = { viewModel.onSuggestionTapped(suggestion) },
                     label = {
@@ -154,7 +158,7 @@ private fun HomeInputBar(
             IconButton(onClick = { /* Phase 5: image attachment picker */ }) {
                 Icon(
                     imageVector = Icons.Default.Add,
-                    contentDescription = "Attach file",
+                    contentDescription = stringResource(R.string.home_attach_file),
                     tint = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
@@ -165,7 +169,7 @@ private fun HomeInputBar(
                 modifier = Modifier.weight(1f),
                 placeholder = {
                     Text(
-                        text = "Ask Gemini...",
+                        text = stringResource(R.string.home_input_placeholder),
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         style = MaterialTheme.typography.bodyLarge,
                     )
@@ -191,7 +195,7 @@ private fun HomeInputBar(
             ) {
                 Icon(
                     imageVector = Icons.AutoMirrored.Filled.Send,
-                    contentDescription = "Send message",
+                    contentDescription = stringResource(R.string.home_send_message),
                     tint = if (text.isNotBlank() && !isSending)
                         MaterialTheme.colorScheme.primary
                     else

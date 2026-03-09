@@ -2,6 +2,7 @@ package com.aurachat.presentation.home
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.aurachat.R
 import com.aurachat.domain.error.DomainError
 import com.aurachat.domain.usecase.CreateSessionUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -42,7 +43,7 @@ class HomeViewModel @Inject constructor(
 
     /** Called by the composable after the error snackbar is dismissed. */
     fun onErrorDismissed() {
-        _uiState.update { it.copy(errorMessage = null) }
+        _uiState.update { it.copy(errorMessageResId = null) }
     }
 
     private fun createSessionAndNavigate(title: String) {
@@ -58,19 +59,19 @@ class HomeViewModel @Inject constructor(
                     )
                 }
             } catch (e: DomainError) {
-                val errorMessage = when (e) {
-                    is DomainError.DatabaseError -> "Failed to create chat session. Please try again."
-                    is DomainError.NetworkError -> "Network error. Please check your connection."
-                    is DomainError.ApiError -> "AI service error. Please try again."
-                    is DomainError.ValidationError -> e.message
-                    is DomainError.UnknownError -> "Failed to start chat. Please try again."
+                val errorMessageResId = when (e) {
+                    is DomainError.DatabaseError -> R.string.error_create_session
+                    is DomainError.NetworkError -> R.string.error_network
+                    is DomainError.ApiError -> R.string.error_api
+                    is DomainError.ValidationError -> R.string.error_start_chat
+                    is DomainError.UnknownError -> R.string.error_start_chat
                 }
                 _uiState.update {
-                    it.copy(isCreatingSession = false, errorMessage = errorMessage)
+                    it.copy(isCreatingSession = false, errorMessageResId = errorMessageResId)
                 }
             } catch (e: Exception) {
                 _uiState.update {
-                    it.copy(isCreatingSession = false, errorMessage = "Failed to start chat. Please try again.")
+                    it.copy(isCreatingSession = false, errorMessageResId = R.string.error_start_chat)
                 }
             }
         }

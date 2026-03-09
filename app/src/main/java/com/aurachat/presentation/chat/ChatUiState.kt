@@ -1,5 +1,6 @@
 package com.aurachat.presentation.chat
 
+import androidx.annotation.StringRes
 import com.aurachat.domain.model.ChatMessage
 
 data class ChatUiState(
@@ -16,7 +17,7 @@ data class ChatUiState(
     val inputText: String = "",
 
     // Non-null when the last send attempt failed
-    val errorMessage: String? = null,
+    @StringRes val errorMessageResId: Int? = null,
 
     // True until the first Room emission arrives on screen open
     val isLoadingMessages: Boolean = true,

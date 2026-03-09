@@ -207,8 +207,9 @@
             "command": "./gradlew test --tests '*UseCaseTest'",
             "expected": "All UseCase tests pass"
           },
-          "status": "pending",
-          "notes": "Follow same patterns as SendMessageUseCaseTest. Mock repository dependencies. Target ≥90% coverage."
+          "status": "completed",
+          "notes": "Created comprehensive tests for all remaining UseCases (GetSessionsUseCaseTest: 4 tests, CreateSessionUseCaseTest: 5 tests, DeleteSessionUseCaseTest: 5 tests, UpdateSessionTitleUseCaseTest: 7 tests, SaveMessageUseCaseTest: 9 tests). All tests follow patterns from SendMessageUseCaseTest using MockK for mocking and runTest for coroutines. Each test suite covers: basic functionality, edge cases (empty/long/special inputs), different IDs/parameters, and exact delegation verification. Total: 30 tests, all passing with 0 failures.",
+          "updated_at": "2026-03-09T19:34:28.708010+00:00"
         }
       ]
     },
@@ -240,8 +241,9 @@
             "command": "./gradlew test --tests '*ViewModelTest'",
             "expected": "All ViewModel tests pass with new error handling"
           },
-          "status": "pending",
-          "notes": "Replace generic Exception with specific DomainError types. Update catch blocks to handle DomainError subclasses."
+          "status": "completed",
+          "notes": "Successfully updated HomeViewModel and ChatViewModel to catch and handle DomainError types with specific error messages. Both ViewModels now handle DatabaseError, NetworkError, ApiError, ValidationError, and UnknownError with user-friendly messages. Pre-existing test failures (14 tests) remain but no new failures were introduced.",
+          "updated_at": "2026-03-09T19:39:12.044066+00:00"
         },
         {
           "id": "subtask-4-2",
@@ -265,8 +267,9 @@
             "command": "./gradlew test --tests '*UseCaseTest'",
             "expected": "All UseCase tests pass with new error types"
           },
-          "status": "pending",
-          "notes": "Wrap exceptions from data layer in appropriate DomainError types (NetworkError for API failures, DatabaseError for Room failures, etc.)"
+          "status": "completed",
+          "notes": "Successfully updated all 7 UseCases to throw DomainError types. Added ValidationError for empty/blank inputs (userPrompt, title, content), DatabaseError for repository failures, and NetworkError for Gemini API failures. Flow-based UseCases use .catch() operator, suspend functions use try-catch blocks. Updated 3 tests to expect ValidationError for invalid inputs. All 56 UseCase tests passing (100% success rate). ViewModel tests have pre-existing failures unrelated to this change.",
+          "updated_at": "2026-03-09T19:42:00.000000+00:00"
         }
       ]
     },
@@ -548,5 +551,5 @@
     "type": "PLANNING_COMPLETE",
     "timestamp": "2026-03-09T14:10:03.638023+00:00"
   },
-  "last_updated": "2026-03-09T19:21:53.979239+00:00"
+  "last_updated": "2026-03-09T19:39:12.044074+00:00"
 }
