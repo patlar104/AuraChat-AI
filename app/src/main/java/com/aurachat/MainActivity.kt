@@ -34,6 +34,7 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import com.aurachat.presentation.chat.ChatScreen
+import com.aurachat.presentation.history.DrawerContent
 import com.aurachat.presentation.home.HomeScreen
 import com.aurachat.ui.theme.AuraChatTheme
 import dagger.hilt.android.AndroidEntryPoint
@@ -63,7 +64,16 @@ class MainActivity : ComponentActivity() {
                 ModalNavigationDrawer(
                     drawerState = drawerState,
                     drawerContent = {
-                        ModalDrawerSheet { DrawerPlaceholder() }
+                        ModalDrawerSheet {
+                            DrawerContent(
+                                onNavigateToSession = { sessionId ->
+                                    scope.launch {
+                                        drawerState.close()
+                                        navController.navigate(NavRoutes.chat(sessionId))
+                                    }
+                                },
+                            )
+                        }
                     },
                 ) {
                     Scaffold(
@@ -145,12 +155,5 @@ class MainActivity : ComponentActivity() {
 private fun SettingsPlaceholder() {
     Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
         Text("Settings — Phase 7", color = androidx.compose.ui.graphics.Color.White)
-    }
-}
-
-@Composable
-private fun DrawerPlaceholder() {
-    Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-        Text("Drawer — Phase 6", color = androidx.compose.ui.graphics.Color.White)
     }
 }
