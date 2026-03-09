@@ -17,6 +17,7 @@ import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import timber.log.Timber
 import javax.inject.Inject
 
 @HiltViewModel
@@ -36,14 +37,17 @@ class ChatViewModel @Inject constructor(
     private var sendJob: Job? = null
 
     init {
+        Timber.d("ChatViewModel initialized for sessionId=$sessionId")
         observeMessages()
     }
 
     // ── Message observation ───────────────────────────────────────────────────
 
     private fun observeMessages() {
+        Timber.d("Starting message observation for sessionId=$sessionId")
         getMessages(sessionId)
             .onEach { messages ->
+                Timber.d("Received ${messages.size} messages from repository")
                 _uiState.update { state ->
                     state.copy(
                         messages = messages,
@@ -56,29 +60,38 @@ class ChatViewModel @Inject constructor(
                     )
                 }
             }
-            .catch { /* Room errors are non-recoverable; swallow silently */ }
+            .catch { e ->
+                Timber.e(e, "Error observing messages for sessionId=$sessionId")
+            }
             .launchIn(viewModelScope)
     }
 
     // ── User interactions ─────────────────────────────────────────────────────
 
     fun onInputChanged(text: String) {
+        Timber.d("Input changed: ${text.take(20)}${if (text.length > 20) "..." else ""}")
         _uiState.update { it.copy(inputText = text, errorMessageResId = null) }
     }
 
     fun onSendClicked() {
         val prompt = _uiState.value.inputText.trim()
-        if (prompt.isBlank() || _uiState.value.isStreaming) return
+        if (prompt.isBlank() || _uiState.value.isStreaming) {
+            Timber.d("onSendClicked ignored: blank=${prompt.isBlank()}, isStreaming=${_uiState.value.isStreaming}")
+            return
+        }
+        Timber.i("User sending message: ${prompt.take(30)}...")
         startSend(prompt)
     }
 
     fun onRetryClicked() {
+        Timber.d("Retry clicked, clearing error state")
         _uiState.update { it.copy(errorMessageResId = null) }
     }
 
     // ── Internal send logic ───────────────────────────────────────────────────
 
     private fun startSend(prompt: String) {
+        Timber.d("Starting send for sessionId=$sessionId")
         sendJob?.cancel()
         sendJob = viewModelScope.launch {
             _uiState.update { state ->
@@ -91,12 +104,18 @@ class ChatViewModel @Inject constructor(
             }
 
             try {
+                var chunkCount = 0
                 sendMessage(sessionId, prompt).collect { chunk ->
+                    chunkCount++
+                    if (chunkCount == 1) {
+                        Timber.d("Received first streaming chunk")
+                    }
                     _uiState.update { state ->
                         state.copy(streamingText = (state.streamingText ?: "") + chunk)
                     }
                 }
 
+                Timber.d("Streaming completed with $chunkCount chunks")
                 // Stream completed. SendMessageUseCase already saved the AI message to Room.
                 // Set isStreaming=false but intentionally leave streamingText non-null.
                 // observeMessages() will clear it atomically when Room fires with the saved message.
@@ -105,6 +124,7 @@ class ChatViewModel @Inject constructor(
                 }
 
             } catch (e: DomainError) {
+                Timber.e(e, "Failed to send message: ${e.javaClass.simpleName}")
                 val errorMessageResId = when (e) {
                     is DomainError.DatabaseError -> R.string.error_save_message
                     is DomainError.NetworkError -> R.string.error_network
@@ -120,6 +140,7 @@ class ChatViewModel @Inject constructor(
                     )
                 }
             } catch (e: Exception) {
+                Timber.e(e, "Unexpected error sending message")
                 _uiState.update { state ->
                     state.copy(
                         isStreaming = false,
