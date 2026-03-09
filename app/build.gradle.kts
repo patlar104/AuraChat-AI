@@ -112,12 +112,17 @@ dependencies {
 	// Coroutines
 	implementation(libs.kotlinx.coroutines.android)
 
+	// Logging
+	implementation(libs.timber)
+
 	// Firebase BOM + Firebase AI Logic (primary Gemini integration)
 	implementation(platform(libs.firebase.bom))
 	implementation(libs.firebase.ai)
 
 	// Testing
 	testImplementation(libs.junit)
+	testImplementation(libs.mockk)
+	testImplementation(libs.turbine)
 	androidTestImplementation(libs.androidx.junit)
 	androidTestImplementation(libs.androidx.espresso.core)
 	androidTestImplementation(platform(libs.androidx.compose.bom))
