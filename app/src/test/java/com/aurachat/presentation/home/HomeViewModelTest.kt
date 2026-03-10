@@ -1,15 +1,14 @@
 package com.aurachat.presentation.home
 
 import app.cash.turbine.test
-import com.aurachat.R
 import com.aurachat.domain.usecase.CreateSessionUseCase
 import io.mockk.coEvery
 import io.mockk.coVerify
 import io.mockk.mockk
+import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.StandardTestDispatcher
-import kotlinx.coroutines.test.TestCoroutineScheduler
 import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.runTest
@@ -25,14 +24,12 @@ import org.junit.Test
 @OptIn(ExperimentalCoroutinesApi::class)
 class HomeViewModelTest {
 
-    private val testScheduler = TestCoroutineScheduler()
-    private val testDispatcher = StandardTestDispatcher(testScheduler)
+    private val testDispatcher = StandardTestDispatcher()
     private lateinit var createSessionUseCase: CreateSessionUseCase
     private lateinit var viewModel: HomeViewModel
 
     @Before
     fun setup() {
-        Dispatchers.setMain(testDispatcher)
         Dispatchers.setMain(testDispatcher)
         createSessionUseCase = mockk()
         viewModel = HomeViewModel(createSessionUseCase)
@@ -50,7 +47,7 @@ class HomeViewModelTest {
             assertEquals("", state.inputText)
             assertNull(state.navigateToSessionId)
             assertFalse(state.isCreatingSession)
-            assertNull(state.errorMessageResId)
+            assertNull(state.errorMessage)
         }
     }
 
@@ -92,7 +89,7 @@ class HomeViewModelTest {
             assertFalse(completedState.isCreatingSession)
             assertEquals(expectedSessionId, completedState.navigateToSessionId)
             assertEquals("", completedState.inputText)
-            assertNull(completedState.errorMessageResId)
+            assertNull(completedState.errorMessage)
         }
 
         coVerify { createSessionUseCase("Test message") }
@@ -131,8 +128,9 @@ class HomeViewModelTest {
 
     @Test
     fun `onSend when already creating session does nothing`() = runTest {
-        val expectedSessionId = 123L
-        coEvery { createSessionUseCase(any()) } returns expectedSessionId
+        // Use CompletableDeferred so the first session stays in-progress while we test the guard
+        val sessionCreated = CompletableDeferred<Long>()
+        coEvery { createSessionUseCase(any()) } coAnswers { sessionCreated.await() }
 
         viewModel.uiState.test {
             awaitItem() // skip initial
@@ -144,16 +142,20 @@ class HomeViewModelTest {
             viewModel.onSend()
             awaitItem() // isCreatingSession = true
 
+            // Session is blocked at sessionCreated.await() — isCreatingSession = true
             // Try to send again before first completes
             viewModel.onInputChanged("Second message")
-            awaitItem() // inputText update
+            awaitItem() // inputText update — isCreatingSession still true
 
-            viewModel.onSend()
+            viewModel.onSend() // no-op: isCreatingSession = true
+
+            // Release the first session
+            sessionCreated.complete(123L)
+            advanceUntilIdle()
 
             // Should only emit the completion of first session
-            advanceUntilIdle()
             val completedState = awaitItem()
-            assertEquals(expectedSessionId, completedState.navigateToSessionId)
+            assertEquals(123L, completedState.navigateToSessionId)
             assertEquals("", completedState.inputText)
 
             expectNoEvents()
@@ -218,8 +220,9 @@ class HomeViewModelTest {
 
     @Test
     fun `onSuggestionTapped when already creating session does nothing`() = runTest {
-        val expectedSessionId = 123L
-        coEvery { createSessionUseCase(any()) } returns expectedSessionId
+        // Use CompletableDeferred so the first session stays in-progress while we test the guard
+        val sessionCreated = CompletableDeferred<Long>()
+        coEvery { createSessionUseCase(any()) } coAnswers { sessionCreated.await() }
 
         viewModel.uiState.test {
             awaitItem() // skip initial
@@ -231,12 +234,15 @@ class HomeViewModelTest {
             viewModel.onSend()
             awaitItem() // isCreatingSession = true
 
+            // Session is blocked at sessionCreated.await() — isCreatingSession = true
             // Try to tap suggestion before first completes
-            viewModel.onSuggestionTapped("Suggestion")
+            viewModel.onSuggestionTapped("Suggestion") // no-op: isCreatingSession = true
 
-            // Should only emit the completion of first session
+            // Release the first session
+            sessionCreated.complete(123L)
             advanceUntilIdle()
-            awaitItem() // completion
+
+            awaitItem() // completion of first session
 
             expectNoEvents()
         }
@@ -283,7 +289,7 @@ class HomeViewModelTest {
     }
 
     @Test
-    fun `onErrorDismissed clears errorMessageResId`() = runTest {
+    fun `onErrorDismissed clears errorMessage`() = runTest {
         coEvery { createSessionUseCase(any()) } throws RuntimeException("Test error")
 
         viewModel.uiState.test {
@@ -297,11 +303,11 @@ class HomeViewModelTest {
 
             advanceUntilIdle()
             val stateWithError = awaitItem()
-            assertEquals(R.string.error_start_chat, stateWithError.errorMessageResId)
+            assertEquals("Failed to start chat. Please try again.", stateWithError.errorMessage)
 
             viewModel.onErrorDismissed()
             val stateAfterDismiss = awaitItem()
-            assertNull(stateAfterDismiss.errorMessageResId)
+            assertNull(stateAfterDismiss.errorMessage)
         }
     }
 
@@ -326,7 +332,7 @@ class HomeViewModelTest {
             // Should set error and clear loading state
             val errorState = awaitItem()
             assertFalse(errorState.isCreatingSession)
-            assertEquals(R.string.error_start_chat, errorState.errorMessageResId)
+            assertEquals("Failed to start chat. Please try again.", errorState.errorMessage)
             assertNull(errorState.navigateToSessionId)
             // Input text should remain for retry
             assertEquals("Test message", errorState.inputText)
@@ -345,7 +351,7 @@ class HomeViewModelTest {
         viewModel.uiState.test {
             val state = awaitItem()
             assertEquals("Important message", state.inputText)
-            assertEquals(R.string.error_start_chat, state.errorMessageResId)
+            assertEquals("Failed to start chat. Please try again.", state.errorMessage)
         }
     }
 
@@ -371,12 +377,12 @@ class HomeViewModelTest {
             awaitItem() // isCreatingSession = true
             advanceUntilIdle()
             val errorState = awaitItem()
-            assertEquals(R.string.error_start_chat, errorState.errorMessageResId)
+            assertEquals("Failed to start chat. Please try again.", errorState.errorMessage)
             assertEquals("Test", errorState.inputText)
 
             // Dismiss error
             viewModel.onErrorDismissed()
-            awaitItem() // errorMessageResId cleared
+            awaitItem() // errorMessage cleared
 
             // Second attempt - should succeed
             viewModel.onSend()
@@ -385,7 +391,7 @@ class HomeViewModelTest {
             val successState = awaitItem()
             assertEquals(123L, successState.navigateToSessionId)
             assertEquals("", successState.inputText)
-            assertNull(successState.errorMessageResId)
+            assertNull(successState.errorMessage)
         }
 
         coVerify(exactly = 2) { createSessionUseCase("Test") }

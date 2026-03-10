@@ -2,7 +2,6 @@ package com.aurachat.presentation.chat
 
 import androidx.lifecycle.SavedStateHandle
 import app.cash.turbine.test
-import com.aurachat.R
 import com.aurachat.domain.model.ChatMessage
 import com.aurachat.domain.model.MessageRole
 import com.aurachat.domain.usecase.GetMessagesUseCase
@@ -11,12 +10,14 @@ import io.mockk.coEvery
 import io.mockk.coVerify
 import io.mockk.every
 import io.mockk.mockk
+import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.flowOf
+import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.test.StandardTestDispatcher
-import kotlinx.coroutines.test.TestCoroutineScheduler
 import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.runTest
@@ -32,8 +33,7 @@ import org.junit.Test
 @OptIn(ExperimentalCoroutinesApi::class)
 class ChatViewModelTest {
 
-    private val testScheduler = TestCoroutineScheduler()
-    private val testDispatcher = StandardTestDispatcher(testScheduler)
+    private val testDispatcher = StandardTestDispatcher()
     private lateinit var savedStateHandle: SavedStateHandle
     private lateinit var getMessagesUseCase: GetMessagesUseCase
     private lateinit var sendMessageUseCase: SendMessageUseCase
@@ -87,7 +87,7 @@ class ChatViewModelTest {
             assertEquals("", state.inputText)
             assertNull(state.streamingText)
             assertFalse(state.isStreaming)
-            assertNull(state.errorMessageResId)
+            assertNull(state.errorMessage)
             assertTrue(state.isLoadingMessages)
         }
     }
@@ -159,11 +159,10 @@ class ChatViewModelTest {
     }
 
     @Test
-    fun `onInputChanged clears errorMessageResId`() = runTest {
-        coEvery { sendMessageUseCase(testSessionId, any()) } returns flow {
-            throw RuntimeException("Error")
-        }
+    fun `onInputChanged clears errorMessage`() = runTest {
+        coEvery { sendMessageUseCase(testSessionId, any()) } throws RuntimeException("Error")
         viewModel = createViewModel()
+        advanceUntilIdle() // drain initial observeMessages emission
 
         viewModel.uiState.test {
             awaitItem() // skip initial
@@ -177,13 +176,13 @@ class ChatViewModelTest {
 
             advanceUntilIdle()
             val errorState = awaitItem()
-            assertEquals(R.string.error_unknown, errorState.errorMessageResId)
+            assertEquals("Error", errorState.errorMessage)
 
             // Input change should clear error
             viewModel.onInputChanged("New text")
             val clearedState = awaitItem()
             assertEquals("New text", clearedState.inputText)
-            assertNull(clearedState.errorMessageResId)
+            assertNull(clearedState.errorMessage)
         }
     }
 
@@ -195,6 +194,7 @@ class ChatViewModelTest {
             "!"
         )
         viewModel = createViewModel()
+        advanceUntilIdle() // drain initial observeMessages emission
 
         viewModel.uiState.test {
             awaitItem() // skip initial
@@ -209,7 +209,7 @@ class ChatViewModelTest {
             assertEquals("", streamingState.inputText)
             assertTrue(streamingState.isStreaming)
             assertEquals("", streamingState.streamingText)
-            assertNull(streamingState.errorMessageResId)
+            assertNull(streamingState.errorMessage)
 
             advanceUntilIdle()
 
@@ -272,8 +272,14 @@ class ChatViewModelTest {
 
     @Test
     fun `onSendClicked while already streaming does nothing`() = runTest {
-        coEvery { sendMessageUseCase(testSessionId, any()) } returns flowOf("Response")
+        // Use CompletableDeferred to keep the stream alive while we test the guard
+        val streamingComplete = CompletableDeferred<Unit>()
+        coEvery { sendMessageUseCase(testSessionId, any()) } returns flow {
+            emit("Response")
+            streamingComplete.await() // keeps isStreaming = true
+        }
         viewModel = createViewModel()
+        advanceUntilIdle() // drain initial observeMessages emission
 
         viewModel.uiState.test {
             awaitItem() // skip initial
@@ -285,16 +291,23 @@ class ChatViewModelTest {
             viewModel.onSendClicked()
             awaitItem() // isStreaming = true
 
-            // Try to send again before first completes
+            // Consume the chunk emitted before streamingComplete.await()
+            val chunkState = awaitItem()
+            assertEquals("Response", chunkState.streamingText)
+            assertTrue(chunkState.isStreaming)
+
+            // Try to send again — stream is still active (blocked at streamingComplete.await())
             viewModel.onInputChanged("Second message")
-            awaitItem() // inputText update
+            awaitItem() // inputText update — isStreaming still true
 
-            viewModel.onSendClicked()
+            viewModel.onSendClicked() // no-op: isStreaming = true
 
-            // Should only complete first send
+            // Release the stream and let it complete
+            streamingComplete.complete(Unit)
             advanceUntilIdle()
-            awaitItem() // streaming text update
-            awaitItem() // streaming complete
+
+            val completedState = awaitItem()
+            assertFalse(completedState.isStreaming)
 
             expectNoEvents()
         }
@@ -317,11 +330,10 @@ class ChatViewModelTest {
     }
 
     @Test
-    fun `streaming error sets errorMessageResId and stops streaming`() = runTest {
-        coEvery { sendMessageUseCase(testSessionId, any()) } returns flow {
-            throw RuntimeException("Network error")
-        }
+    fun `streaming error sets errorMessage and stops streaming`() = runTest {
+        coEvery { sendMessageUseCase(testSessionId, any()) } throws RuntimeException("Network error")
         viewModel = createViewModel()
+        advanceUntilIdle() // drain initial observeMessages emission
 
         viewModel.uiState.test {
             awaitItem() // skip initial
@@ -342,16 +354,15 @@ class ChatViewModelTest {
             val errorState = awaitItem()
             assertFalse(errorState.isStreaming)
             assertNull(errorState.streamingText)
-            assertEquals(R.string.error_unknown, errorState.errorMessageResId)
+            assertEquals("Network error", errorState.errorMessage)
         }
     }
 
     @Test
     fun `streaming error with null message uses default error message`() = runTest {
-        coEvery { sendMessageUseCase(testSessionId, any()) } returns flow {
-            throw RuntimeException()
-        }
+        coEvery { sendMessageUseCase(testSessionId, any()) } throws RuntimeException()
         viewModel = createViewModel()
+        advanceUntilIdle() // drain initial observeMessages emission
 
         viewModel.uiState.test {
             awaitItem() // skip initial
@@ -365,16 +376,15 @@ class ChatViewModelTest {
             advanceUntilIdle()
 
             val errorState = awaitItem()
-            assertEquals(R.string.error_unknown, errorState.errorMessageResId)
+            assertEquals("Something went wrong. Please try again.", errorState.errorMessage)
         }
     }
 
     @Test
-    fun `onRetryClicked clears errorMessageResId`() = runTest {
-        coEvery { sendMessageUseCase(testSessionId, any()) } returns flow {
-            throw RuntimeException("Error")
-        }
+    fun `onRetryClicked clears errorMessage`() = runTest {
+        coEvery { sendMessageUseCase(testSessionId, any()) } throws RuntimeException("Error")
         viewModel = createViewModel()
+        advanceUntilIdle() // drain initial observeMessages emission
 
         viewModel.uiState.test {
             awaitItem() // skip initial
@@ -387,11 +397,11 @@ class ChatViewModelTest {
 
             advanceUntilIdle()
             val errorState = awaitItem()
-            assertEquals(R.string.error_unknown, errorState.errorMessageResId)
+            assertEquals("Error", errorState.errorMessage)
 
             viewModel.onRetryClicked()
             val clearedState = awaitItem()
-            assertNull(clearedState.errorMessageResId)
+            assertNull(clearedState.errorMessage)
         }
     }
 
@@ -400,13 +410,14 @@ class ChatViewModelTest {
         var callCount = 0
         coEvery { sendMessageUseCase(testSessionId, any()) } answers {
             if (callCount++ == 0) {
-                flow { throw RuntimeException("First attempt failed") }
+                throw RuntimeException("First attempt failed")
             } else {
                 flowOf("Success")
             }
         }
 
         viewModel = createViewModel()
+        advanceUntilIdle() // drain initial observeMessages emission
 
         viewModel.uiState.test {
             awaitItem() // skip initial
@@ -419,12 +430,12 @@ class ChatViewModelTest {
             awaitItem() // isStreaming = true
             advanceUntilIdle()
             val errorState = awaitItem()
-            assertEquals(R.string.error_unknown, errorState.errorMessageResId)
+            assertEquals("First attempt failed", errorState.errorMessage)
             assertFalse(errorState.isStreaming)
 
             // Retry
             viewModel.onRetryClicked()
-            awaitItem() // errorMessageResId cleared
+            awaitItem() // errorMessage cleared
 
             // Second attempt - should succeed
             viewModel.onSendClicked()
@@ -433,7 +444,7 @@ class ChatViewModelTest {
             awaitItem() // streaming text
             val successState = awaitItem()
             assertFalse(successState.isStreaming)
-            assertNull(successState.errorMessageResId)
+            assertNull(successState.errorMessage)
         }
 
         coVerify(exactly = 2) { sendMessageUseCase(testSessionId, "Test") }
@@ -459,22 +470,18 @@ class ChatViewModelTest {
             )
         )
 
-        every { getMessagesUseCase(testSessionId) } returns flow {
-            emit(initialMessages)
-            // Simulate Room emitting after AI message is saved
-            emit(updatedMessages)
-        }
+        // Use a Channel so we control exactly when Room emits each update
+        val messagesChannel = Channel<List<ChatMessage>>(Channel.UNLIMITED)
+        every { getMessagesUseCase(testSessionId) } returns messagesChannel.receiveAsFlow()
 
         coEvery { sendMessageUseCase(testSessionId, any()) } returns flowOf("AI", " response")
 
         viewModel = createViewModel()
+        messagesChannel.trySend(initialMessages)
+        advanceUntilIdle() // observeMessages processes initialMessages
 
         viewModel.uiState.test {
-            awaitItem() // initial state
-
-            advanceUntilIdle()
-            val loadedState = awaitItem()
-            assertEquals(initialMessages, loadedState.messages)
+            awaitItem() // initial state with initialMessages
 
             viewModel.onInputChanged("User message")
             awaitItem() // inputText update
@@ -489,7 +496,11 @@ class ChatViewModelTest {
             awaitItem() // streamingText = "AI response"
             awaitItem() // isStreaming = false
 
-            // Room emits with saved message - streamingText should clear atomically
+            // Room emits the saved message now that streaming is done
+            messagesChannel.trySend(updatedMessages)
+            advanceUntilIdle()
+
+            // streamingText should be cleared atomically with the new messages
             val finalState = awaitItem()
             assertEquals(updatedMessages, finalState.messages)
             assertNull(finalState.streamingText)
@@ -502,41 +513,50 @@ class ChatViewModelTest {
         val messagesBeforeSend = listOf(testMessages[0])
         val messagesAfterSend = testMessages
 
-        every { getMessagesUseCase(testSessionId) } returns flow {
-            emit(messagesBeforeSend)
-            // Room emits during streaming (e.g., user message saved)
-            emit(messagesAfterSend)
+        // Use a Channel so we control exactly when Room emits
+        val messagesChannel = Channel<List<ChatMessage>>(Channel.UNLIMITED)
+        every { getMessagesUseCase(testSessionId) } returns messagesChannel.receiveAsFlow()
+
+        // Keep the stream alive so isStreaming stays true while Room emits
+        val streamingComplete = CompletableDeferred<Unit>()
+        coEvery { sendMessageUseCase(testSessionId, any()) } returns flow {
+            emit("AI response")
+            streamingComplete.await()
         }
 
-        coEvery { sendMessageUseCase(testSessionId, any()) } returns flowOf("AI response")
-
         viewModel = createViewModel()
+        messagesChannel.trySend(messagesBeforeSend)
+        advanceUntilIdle() // observeMessages processes messagesBeforeSend
 
         viewModel.uiState.test {
-            awaitItem() // initial state
-
-            advanceUntilIdle()
-            awaitItem() // messages loaded
+            awaitItem() // initial state with messagesBeforeSend
 
             viewModel.onInputChanged("Test")
             awaitItem() // inputText update
 
             viewModel.onSendClicked()
-            val streamingStarted = awaitItem()
-            assertTrue(streamingStarted.isStreaming)
-            assertEquals("", streamingStarted.streamingText)
+            awaitItem() // isStreaming = true, streamingText = ""
 
+            // Consume the chunk emitted before streamingComplete.await()
+            val chunkState = awaitItem()
+            assertEquals("AI response", chunkState.streamingText)
+            assertTrue(chunkState.isStreaming)
+
+            // Room emits while isStreaming = true — streamingText must be preserved
+            messagesChannel.trySend(messagesAfterSend)
             advanceUntilIdle()
 
-            // During streaming, streamingText should be preserved even if Room emits
-            val streamingUpdate = awaitItem()
-            if (streamingUpdate.isStreaming) {
-                // If still streaming, streamingText should be preserved
-                assertEquals("AI response", streamingUpdate.streamingText)
-            }
+            val midState = awaitItem()
+            assertEquals(messagesAfterSend, midState.messages)
+            assertEquals("AI response", midState.streamingText) // preserved!
+            assertTrue(midState.isStreaming)
 
-            // Final state after streaming completes
-            skipItems(99) // Skip to final states
+            // Release the stream
+            streamingComplete.complete(Unit)
+            advanceUntilIdle()
+
+            val completedState = awaitItem()
+            assertFalse(completedState.isStreaming)
         }
     }
 
@@ -570,6 +590,7 @@ class ChatViewModelTest {
         }
 
         viewModel = createViewModel()
+        advanceUntilIdle() // drain initial observeMessages emission
 
         viewModel.uiState.test {
             awaitItem() // skip initial
@@ -578,7 +599,10 @@ class ChatViewModelTest {
             awaitItem() // inputText update
 
             viewModel.onSendClicked()
-            awaitItem() // isStreaming = true
+            awaitItem() // isStreaming = true, streamingText = ""
+
+            // "Chunk 1" is emitted synchronously before delay()
+            awaitItem() // chunk 1 received
 
             // Note: The second send will be blocked by the isStreaming check,
             // so we can't actually test job cancellation this way.
@@ -591,6 +615,7 @@ class ChatViewModelTest {
     fun `empty streaming response completes successfully`() = runTest {
         coEvery { sendMessageUseCase(testSessionId, any()) } returns flowOf()
         viewModel = createViewModel()
+        advanceUntilIdle() // drain initial observeMessages emission
 
         viewModel.uiState.test {
             awaitItem() // skip initial
@@ -609,7 +634,7 @@ class ChatViewModelTest {
             val completedState = awaitItem()
             assertFalse(completedState.isStreaming)
             assertEquals("", completedState.streamingText)
-            assertNull(completedState.errorMessageResId)
+            assertNull(completedState.errorMessage)
         }
     }
 
@@ -617,6 +642,7 @@ class ChatViewModelTest {
     fun `single chunk streaming response`() = runTest {
         coEvery { sendMessageUseCase(testSessionId, any()) } returns flowOf("Single chunk")
         viewModel = createViewModel()
+        advanceUntilIdle() // drain initial observeMessages emission
 
         viewModel.uiState.test {
             awaitItem() // skip initial
