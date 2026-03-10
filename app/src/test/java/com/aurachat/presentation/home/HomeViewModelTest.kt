@@ -5,6 +5,7 @@ import com.aurachat.domain.usecase.CreateSessionUseCase
 import io.mockk.coEvery
 import io.mockk.coVerify
 import io.mockk.mockk
+import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.StandardTestDispatcher
@@ -127,8 +128,9 @@ class HomeViewModelTest {
 
     @Test
     fun `onSend when already creating session does nothing`() = runTest {
-        val expectedSessionId = 123L
-        coEvery { createSessionUseCase(any()) } returns expectedSessionId
+        // Use CompletableDeferred so the first session stays in-progress while we test the guard
+        val sessionCreated = CompletableDeferred<Long>()
+        coEvery { createSessionUseCase(any()) } coAnswers { sessionCreated.await() }
 
         viewModel.uiState.test {
             awaitItem() // skip initial
@@ -140,16 +142,20 @@ class HomeViewModelTest {
             viewModel.onSend()
             awaitItem() // isCreatingSession = true
 
+            // Session is blocked at sessionCreated.await() — isCreatingSession = true
             // Try to send again before first completes
             viewModel.onInputChanged("Second message")
-            awaitItem() // inputText update
+            awaitItem() // inputText update — isCreatingSession still true
 
-            viewModel.onSend()
+            viewModel.onSend() // no-op: isCreatingSession = true
+
+            // Release the first session
+            sessionCreated.complete(123L)
+            advanceUntilIdle()
 
             // Should only emit the completion of first session
-            advanceUntilIdle()
             val completedState = awaitItem()
-            assertEquals(expectedSessionId, completedState.navigateToSessionId)
+            assertEquals(123L, completedState.navigateToSessionId)
             assertEquals("", completedState.inputText)
 
             expectNoEvents()
@@ -214,8 +220,9 @@ class HomeViewModelTest {
 
     @Test
     fun `onSuggestionTapped when already creating session does nothing`() = runTest {
-        val expectedSessionId = 123L
-        coEvery { createSessionUseCase(any()) } returns expectedSessionId
+        // Use CompletableDeferred so the first session stays in-progress while we test the guard
+        val sessionCreated = CompletableDeferred<Long>()
+        coEvery { createSessionUseCase(any()) } coAnswers { sessionCreated.await() }
 
         viewModel.uiState.test {
             awaitItem() // skip initial
@@ -227,12 +234,15 @@ class HomeViewModelTest {
             viewModel.onSend()
             awaitItem() // isCreatingSession = true
 
+            // Session is blocked at sessionCreated.await() — isCreatingSession = true
             // Try to tap suggestion before first completes
-            viewModel.onSuggestionTapped("Suggestion")
+            viewModel.onSuggestionTapped("Suggestion") // no-op: isCreatingSession = true
 
-            // Should only emit the completion of first session
+            // Release the first session
+            sessionCreated.complete(123L)
             advanceUntilIdle()
-            awaitItem() // completion
+
+            awaitItem() // completion of first session
 
             expectNoEvents()
         }
