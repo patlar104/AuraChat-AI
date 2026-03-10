@@ -50,7 +50,6 @@ fun HomeScreen(
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val snackbarHostState = remember { SnackbarHostState() }
-    val context = androidx.compose.ui.platform.LocalContext.current
 
     // One-shot navigation: fires when navigateToSessionId becomes non-null
     LaunchedEffect(uiState.navigateToSessionId) {
@@ -61,11 +60,13 @@ fun HomeScreen(
         }
     }
 
+    // Resolve error message string in Composable scope to avoid lint warning
+    val errorMessage = uiState.errorMessageResId?.let { stringResource(it) }
+
     // Show error snackbar when session creation fails
-    LaunchedEffect(uiState.errorMessageResId) {
-        val resId = uiState.errorMessageResId
-        if (resId != null) {
-            snackbarHostState.showSnackbar(context.getString(resId))
+    LaunchedEffect(errorMessage) {
+        if (errorMessage != null) {
+            snackbarHostState.showSnackbar(errorMessage)
             viewModel.onErrorDismissed()
         }
     }
