@@ -60,11 +60,9 @@ fun HomeScreen(
         }
     }
 
-    // Resolve error message string in Composable scope to avoid lint warning
-    val errorMessage = uiState.errorMessageResId?.let { stringResource(it) }
-
     // Show error snackbar when session creation fails
-    LaunchedEffect(errorMessage) {
+    LaunchedEffect(uiState.errorMessage) {
+        val errorMessage = uiState.errorMessage
         if (errorMessage != null) {
             snackbarHostState.showSnackbar(errorMessage)
             viewModel.onErrorDismissed()

@@ -78,10 +78,7 @@ private fun SwipeToDeleteSessionItem(
     onDelete: () -> Unit,
     onClick: () -> Unit,
 ) {
-    val dismissState = rememberSwipeToDismissBoxState(
-        // Only allow end-to-start swipe (right-to-left) to reveal the delete action
-        confirmValueChange = { it == SwipeToDismissBoxValue.EndToStart },
-    )
+    val dismissState = rememberSwipeToDismissBoxState()
 
     // Trigger delete after the swipe animation settles to EndToStart
     LaunchedEffect(dismissState.currentValue) {
@@ -92,6 +89,8 @@ private fun SwipeToDeleteSessionItem(
 
     SwipeToDismissBox(
         state = dismissState,
+        // Only allow end-to-start swipe (right-to-left) to reveal the delete action
+        enableDismissFromStartToEnd = false,
         backgroundContent = {
             Box(
                 modifier = Modifier

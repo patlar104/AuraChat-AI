@@ -132,9 +132,9 @@ private fun ChatContent(
             }
 
             // Inline error row shown below the last message
-            uiState.errorMessageResId?.let { errorResId ->
+            uiState.errorMessage?.let { errorMsg ->
                 item(key = "error_row") {
-                    ErrorRow(messageResId = errorResId, onRetry = onRetryClicked)
+                    ErrorRow(message = errorMsg, onRetry = onRetryClicked)
                 }
             }
         }
@@ -221,7 +221,7 @@ private fun ChatInputBar(
 
 @Composable
 private fun ErrorRow(
-    messageResId: Int,
+    message: String,
     onRetry: () -> Unit,
 ) {
     Row(
@@ -232,7 +232,7 @@ private fun ErrorRow(
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Text(
-            text = stringResource(messageResId),
+            text = message,
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.error,
             modifier = Modifier.weight(1f),

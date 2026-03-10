@@ -2,8 +2,6 @@ package com.aurachat.presentation.home
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.aurachat.R
-import com.aurachat.domain.error.DomainError
 import com.aurachat.domain.usecase.CreateSessionUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -95,7 +93,7 @@ class HomeViewModel @Inject constructor(
      */
     fun onErrorDismissed() {
         Timber.d("Error dismissed")
-        _uiState.update { it.copy(errorMessageResId = null) }
+        _uiState.update { it.copy(errorMessage = null) }
     }
 
     private fun createSessionAndNavigate(title: String) {
@@ -112,22 +110,10 @@ class HomeViewModel @Inject constructor(
                         inputText = "",
                     )
                 }
-            } catch (e: DomainError) {
-                Timber.e(e, "Failed to create session: ${e.javaClass.simpleName}")
-                val errorMessageResId = when (e) {
-                    is DomainError.DatabaseError -> R.string.error_create_session
-                    is DomainError.NetworkError -> R.string.error_network
-                    is DomainError.ApiError -> R.string.error_api
-                    is DomainError.ValidationError -> R.string.error_start_chat
-                    is DomainError.UnknownError -> R.string.error_start_chat
-                }
-                _uiState.update {
-                    it.copy(isCreatingSession = false, errorMessageResId = errorMessageResId)
-                }
             } catch (e: Exception) {
-                Timber.e(e, "Unexpected error creating session")
+                Timber.e(e, "Failed to create session: ${e.javaClass.simpleName}")
                 _uiState.update {
-                    it.copy(isCreatingSession = false, errorMessageResId = R.string.error_start_chat)
+                    it.copy(isCreatingSession = false, errorMessage = "Failed to start chat. Please try again.")
                 }
             }
         }

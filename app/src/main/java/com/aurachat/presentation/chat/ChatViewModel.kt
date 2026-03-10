@@ -3,8 +3,6 @@ package com.aurachat.presentation.chat
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.aurachat.R
-import com.aurachat.domain.error.DomainError
 import com.aurachat.domain.usecase.GetMessagesUseCase
 import com.aurachat.domain.usecase.SendMessageUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -85,7 +83,7 @@ class ChatViewModel @Inject constructor(
      */
     fun onInputChanged(text: String) {
         Timber.d("Input changed: ${text.take(20)}${if (text.length > 20) "..." else ""}")
-        _uiState.update { it.copy(inputText = text, errorMessageResId = null) }
+        _uiState.update { it.copy(inputText = text, errorMessage = null) }
     }
 
     /**
@@ -111,7 +109,7 @@ class ChatViewModel @Inject constructor(
      */
     fun onRetryClicked() {
         Timber.d("Retry clicked, clearing error state")
-        _uiState.update { it.copy(errorMessageResId = null) }
+        _uiState.update { it.copy(errorMessage = null) }
     }
 
     // ── Internal send logic ───────────────────────────────────────────────────
@@ -125,7 +123,7 @@ class ChatViewModel @Inject constructor(
                     inputText = "",
                     isStreaming = true,
                     streamingText = "",  // Empty string = bubble visible, no chunks yet
-                    errorMessageResId = null,
+                    errorMessage = null,
                 )
             }
 
@@ -149,29 +147,14 @@ class ChatViewModel @Inject constructor(
                     state.copy(isStreaming = false)
                 }
 
-            } catch (e: DomainError) {
-                Timber.e(e, "Failed to send message: ${e.javaClass.simpleName}")
-                val errorMessageResId = when (e) {
-                    is DomainError.DatabaseError -> R.string.error_save_message
-                    is DomainError.NetworkError -> R.string.error_network
-                    is DomainError.ApiError -> R.string.error_api
-                    is DomainError.ValidationError -> R.string.error_unknown
-                    is DomainError.UnknownError -> R.string.error_unknown
-                }
-                _uiState.update { state ->
-                    state.copy(
-                        isStreaming = false,
-                        streamingText = null,
-                        errorMessageResId = errorMessageResId,
-                    )
-                }
             } catch (e: Exception) {
-                Timber.e(e, "Unexpected error sending message")
+                Timber.e(e, "Failed to send message: ${e.javaClass.simpleName}")
                 _uiState.update { state ->
                     state.copy(
                         isStreaming = false,
                         streamingText = null,
-                        errorMessageResId = R.string.error_unknown,
+                        errorMessage = e.message ?: "Something went wrong. Please try again.",
+                        inputText = prompt, // restore prompt so user can retry
                     )
                 }
             }
