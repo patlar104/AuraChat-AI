@@ -1,3 +1,28 @@
 <resources>
     <string name="app_name">AuraChat</string>
+
+    <!-- Home Screen -->
+    <string name="home_greeting">Hi Patrick, where should we start?</string>
+    <string name="home_input_placeholder">Ask Gemini…</string>
+    <string name="home_attach_file">Attach file</string>
+    <string name="home_send_message">Send message</string>
+
+    <!-- Suggestion Chips -->
+    <string name="suggestion_quantum">Explain quantum computing simply</string>
+    <string name="suggestion_debug">Help me debug this code</string>
+    <string name="suggestion_python">Write a quick Python script</string>
+    <string name="suggestion_ai_news">Summarize the latest AI news</string>
+
+    <!-- Chat Screen -->
+    <string name="chat_input_placeholder">Message AuraChat…</string>
+    <string name="chat_send">Send</string>
+    <string name="chat_retry">Try again</string>
+
+    <!-- Error Messages -->
+    <string name="error_create_session">Failed to create chat session. Please try again.</string>
+    <string name="error_network">Network error. Please check your connection.</string>
+    <string name="error_api">AI service error. Please try again.</string>
+    <string name="error_start_chat">Failed to start chat. Please try again.</string>
+    <string name="error_save_message">Failed to save message. Please try again.</string>
+    <string name="error_unknown">Something went wrong. Please try again.</string>
 </resources>

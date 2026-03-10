@@ -1,12 +1,16 @@
 package com.aurachat.domain.usecase
 
 import com.aurachat.data.remote.GeminiDataSource
+import com.aurachat.domain.error.DomainError
 import com.aurachat.domain.model.ChatMessage
 import com.aurachat.domain.model.MessageRole
 import com.aurachat.domain.repository.ChatRepository
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flow
+import timber.log.Timber
+import java.io.IOException
 import javax.inject.Inject
 
 class SendMessageUseCase @Inject constructor(
@@ -26,43 +30,74 @@ class SendMessageUseCase @Inject constructor(
      * MutableStateFlow<String> to drive the streaming bubble in the chat UI (Phase 5).
      */
     operator fun invoke(sessionId: Long, userPrompt: String): Flow<String> = flow {
-        val now = System.currentTimeMillis()
+        Timber.d("SendMessageUseCase invoked for sessionId=$sessionId, prompt=${userPrompt.take(30)}...")
 
-        // Snapshot BEFORE saving so we can detect the first message and pass
-        // correct prior history to Gemini (excludes the current user prompt)
-        val historyBefore = repository.getMessagesFlow(sessionId).first()
-        val isFirstMessage = historyBefore.isEmpty()
-
-        // Persist user message — also syncs session updatedAt + preview via repository
-        repository.saveMessage(
-            ChatMessage(
-                sessionId = sessionId,
-                content = userPrompt,
-                role = MessageRole.USER,
-                timestamp = now,
-            )
-        )
-
-        // Stream from Gemini, re-emitting each chunk to the collector (ViewModel)
-        val fullResponse = StringBuilder()
-        geminiDataSource.sendMessage(historyBefore, userPrompt).collect { chunk ->
-            fullResponse.append(chunk)
-            emit(chunk)
+        // Validate input
+        if (userPrompt.isBlank()) {
+            Timber.e("Validation failed: empty message")
+            throw DomainError.ValidationError("Message cannot be empty")
         }
 
-        // Persist the completed AI response
-        repository.saveMessage(
-            ChatMessage(
-                sessionId = sessionId,
-                content = fullResponse.toString(),
-                role = MessageRole.MODEL,
-                timestamp = System.currentTimeMillis(),
-            )
-        )
+        val now = System.currentTimeMillis()
 
-        // Auto-title the session from the user's first message (truncated to 60 chars)
-        if (isFirstMessage) {
-            updateSessionTitle(sessionId, userPrompt.take(60))
+        try {
+            // Snapshot BEFORE saving so we can detect the first message and pass
+            // correct prior history to Gemini (excludes the current user prompt)
+            val historyBefore = repository.getMessagesFlow(sessionId).first()
+            val isFirstMessage = historyBefore.isEmpty()
+            Timber.d("History snapshot: ${historyBefore.size} messages, isFirstMessage=$isFirstMessage")
+
+            // Persist user message — also syncs session updatedAt + preview via repository
+            repository.saveMessage(
+                ChatMessage(
+                    sessionId = sessionId,
+                    content = userPrompt,
+                    role = MessageRole.USER,
+                    timestamp = now,
+                )
+            )
+            Timber.d("User message saved to repository")
+
+            // Stream from Gemini, re-emitting each chunk to the collector (ViewModel)
+            Timber.d("Starting Gemini streaming request")
+            val fullResponse = StringBuilder()
+            geminiDataSource.sendMessage(historyBefore, userPrompt)
+                .catch { e ->
+                    Timber.e(e, "Gemini streaming error: ${e.javaClass.simpleName}")
+                    throw when (e) {
+                        is IOException -> DomainError.NetworkError("Failed to connect to AI service: ${e.message}")
+                        is DomainError -> e
+                        else -> DomainError.ApiError(0, "AI service error: ${e.message}")
+                    }
+                }
+                .collect { chunk ->
+                    fullResponse.append(chunk)
+                    emit(chunk)
+                }
+            Timber.d("Gemini streaming completed, response length=${fullResponse.length}")
+
+            // Persist the completed AI response
+            repository.saveMessage(
+                ChatMessage(
+                    sessionId = sessionId,
+                    content = fullResponse.toString(),
+                    role = MessageRole.MODEL,
+                    timestamp = System.currentTimeMillis(),
+                )
+            )
+            Timber.d("AI response saved to repository")
+
+            // Auto-title the session from the user's first message (truncated to 60 chars)
+            if (isFirstMessage) {
+                Timber.i("Auto-titling session from first message")
+                updateSessionTitle(sessionId, userPrompt.take(60))
+            }
+        } catch (e: DomainError) {
+            Timber.e(e, "DomainError in SendMessageUseCase")
+            throw e
+        } catch (e: Exception) {
+            Timber.e(e, "Unexpected error in SendMessageUseCase")
+            throw DomainError.DatabaseError("Failed to send message: ${e.message}")
         }
     }
 }
