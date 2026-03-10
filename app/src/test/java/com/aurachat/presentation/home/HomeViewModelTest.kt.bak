@@ -33,7 +33,6 @@ class HomeViewModelTest {
     @Before
     fun setup() {
         Dispatchers.setMain(testDispatcher)
-        Dispatchers.setMain(testDispatcher)
         createSessionUseCase = mockk()
         viewModel = HomeViewModel(createSessionUseCase)
     }
@@ -44,7 +43,7 @@ class HomeViewModelTest {
     }
 
     @Test
-    fun `initial state is correct`() = runTest {
+    fun `initial state is correct`() = runTest(testDispatcher) {
         viewModel.uiState.test {
             val state = awaitItem()
             assertEquals("", state.inputText)
@@ -55,7 +54,7 @@ class HomeViewModelTest {
     }
 
     @Test
-    fun `onInputChanged updates inputText`() = runTest {
+    fun `onInputChanged updates inputText`() = runTest(testDispatcher) {
         viewModel.uiState.test {
             awaitItem() // skip initial
 
@@ -68,7 +67,7 @@ class HomeViewModelTest {
     }
 
     @Test
-    fun `onSend creates session with valid input`() = runTest {
+    fun `onSend creates session with valid input`() = runTest(testDispatcher) {
         val expectedSessionId = 123L
         coEvery { createSessionUseCase(any()) } returns expectedSessionId
 
@@ -99,7 +98,7 @@ class HomeViewModelTest {
     }
 
     @Test
-    fun `onSend with blank input does nothing`() = runTest {
+    fun `onSend with blank input does nothing`() = runTest(testDispatcher) {
         viewModel.uiState.test {
             awaitItem() // skip initial
 
@@ -116,7 +115,7 @@ class HomeViewModelTest {
     }
 
     @Test
-    fun `onSend with empty input does nothing`() = runTest {
+    fun `onSend with empty input does nothing`() = runTest(testDispatcher) {
         viewModel.uiState.test {
             awaitItem() // skip initial
 
@@ -130,7 +129,7 @@ class HomeViewModelTest {
     }
 
     @Test
-    fun `onSend when already creating session does nothing`() = runTest {
+    fun `onSend when already creating session does nothing`() = runTest(testDispatcher) {
         val expectedSessionId = 123L
         coEvery { createSessionUseCase(any()) } returns expectedSessionId
 
@@ -164,7 +163,7 @@ class HomeViewModelTest {
     }
 
     @Test
-    fun `onSend trims whitespace`() = runTest {
+    fun `onSend trims whitespace`() = runTest(testDispatcher) {
         val expectedSessionId = 456L
         coEvery { createSessionUseCase(any()) } returns expectedSessionId
 
@@ -177,7 +176,7 @@ class HomeViewModelTest {
     }
 
     @Test
-    fun `onSend truncates title to 60 characters`() = runTest {
+    fun `onSend truncates title to 60 characters`() = runTest(testDispatcher) {
         val longText = "a".repeat(100)
         val expectedSessionId = 789L
         coEvery { createSessionUseCase(any()) } returns expectedSessionId
@@ -191,7 +190,7 @@ class HomeViewModelTest {
     }
 
     @Test
-    fun `onSuggestionTapped creates session with suggestion text`() = runTest {
+    fun `onSuggestionTapped creates session with suggestion text`() = runTest(testDispatcher) {
         val expectedSessionId = 999L
         coEvery { createSessionUseCase(any()) } returns expectedSessionId
 
@@ -217,7 +216,7 @@ class HomeViewModelTest {
     }
 
     @Test
-    fun `onSuggestionTapped when already creating session does nothing`() = runTest {
+    fun `onSuggestionTapped when already creating session does nothing`() = runTest(testDispatcher) {
         val expectedSessionId = 123L
         coEvery { createSessionUseCase(any()) } returns expectedSessionId
 
@@ -246,7 +245,7 @@ class HomeViewModelTest {
     }
 
     @Test
-    fun `onSuggestionTapped truncates title to 60 characters`() = runTest {
+    fun `onSuggestionTapped truncates title to 60 characters`() = runTest(testDispatcher) {
         val longSuggestion = "b".repeat(100)
         val expectedSessionId = 555L
         coEvery { createSessionUseCase(any()) } returns expectedSessionId
@@ -259,7 +258,7 @@ class HomeViewModelTest {
     }
 
     @Test
-    fun `onNavigationConsumed clears navigateToSessionId`() = runTest {
+    fun `onNavigationConsumed clears navigateToSessionId`() = runTest(testDispatcher) {
         val expectedSessionId = 123L
         coEvery { createSessionUseCase(any()) } returns expectedSessionId
 
@@ -283,7 +282,7 @@ class HomeViewModelTest {
     }
 
     @Test
-    fun `onErrorDismissed clears errorMessageResId`() = runTest {
+    fun `onErrorDismissed clears errorMessageResId`() = runTest(testDispatcher) {
         coEvery { createSessionUseCase(any()) } throws RuntimeException("Test error")
 
         viewModel.uiState.test {
@@ -306,7 +305,7 @@ class HomeViewModelTest {
     }
 
     @Test
-    fun `createSession error sets error message and stops loading`() = runTest {
+    fun `createSession error sets error message and stops loading`() = runTest(testDispatcher) {
         coEvery { createSessionUseCase(any()) } throws RuntimeException("Network error")
 
         viewModel.uiState.test {
@@ -334,7 +333,7 @@ class HomeViewModelTest {
     }
 
     @Test
-    fun `error does not clear input text for retry`() = runTest {
+    fun `error does not clear input text for retry`() = runTest(testDispatcher) {
         coEvery { createSessionUseCase(any()) } throws RuntimeException("Error")
 
         viewModel.onInputChanged("Important message")
@@ -350,7 +349,7 @@ class HomeViewModelTest {
     }
 
     @Test
-    fun `successful session creation after error recovery`() = runTest {
+    fun `successful session creation after error recovery`() = runTest(testDispatcher) {
         var callCount = 0
         coEvery { createSessionUseCase(any()) } answers {
             if (callCount++ == 0) {

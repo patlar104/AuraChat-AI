@@ -78,7 +78,7 @@ class ChatViewModelTest {
     }
 
     @Test
-    fun `initial state is correct`() = runTest {
+    fun `initial state is correct`() = runTest(testDispatcher) {
         viewModel = createViewModel()
 
         viewModel.uiState.test {
@@ -93,13 +93,13 @@ class ChatViewModelTest {
     }
 
     @Test
-    fun `sessionId is loaded from SavedStateHandle`() = runTest {
+    fun `sessionId is loaded from SavedStateHandle`() = runTest(testDispatcher) {
         viewModel = createViewModel()
         assertEquals(testSessionId, viewModel.sessionId)
     }
 
     @Test
-    fun `observeMessages loads messages from repository`() = runTest {
+    fun `observeMessages loads messages from repository`() = runTest(testDispatcher) {
         every { getMessagesUseCase(testSessionId) } returns flowOf(testMessages)
         viewModel = createViewModel()
 
@@ -113,7 +113,7 @@ class ChatViewModelTest {
     }
 
     @Test
-    fun `observeMessages updates when repository emits new messages`() = runTest {
+    fun `observeMessages updates when repository emits new messages`() = runTest(testDispatcher) {
         val messages1 = listOf(testMessages[0])
         val messages2 = testMessages
 
@@ -144,7 +144,7 @@ class ChatViewModelTest {
     }
 
     @Test
-    fun `onInputChanged updates inputText`() = runTest {
+    fun `onInputChanged updates inputText`() = runTest(testDispatcher) {
         viewModel = createViewModel()
 
         viewModel.uiState.test {
@@ -159,7 +159,7 @@ class ChatViewModelTest {
     }
 
     @Test
-    fun `onInputChanged clears errorMessageResId`() = runTest {
+    fun `onInputChanged clears errorMessageResId`() = runTest(testDispatcher) {
         coEvery { sendMessageUseCase(testSessionId, any()) } returns flow {
             throw RuntimeException("Error")
         }
@@ -188,7 +188,7 @@ class ChatViewModelTest {
     }
 
     @Test
-    fun `onSendClicked with valid input starts streaming`() = runTest {
+    fun `onSendClicked with valid input starts streaming`() = runTest(testDispatcher) {
         coEvery { sendMessageUseCase(testSessionId, "Test message") } returns flowOf(
             "Hello",
             " there",
@@ -236,7 +236,7 @@ class ChatViewModelTest {
     }
 
     @Test
-    fun `onSendClicked with blank input does nothing`() = runTest {
+    fun `onSendClicked with blank input does nothing`() = runTest(testDispatcher) {
         viewModel = createViewModel()
 
         viewModel.uiState.test {
@@ -255,7 +255,7 @@ class ChatViewModelTest {
     }
 
     @Test
-    fun `onSendClicked with empty input does nothing`() = runTest {
+    fun `onSendClicked with empty input does nothing`() = runTest(testDispatcher) {
         viewModel = createViewModel()
 
         viewModel.uiState.test {
@@ -271,7 +271,7 @@ class ChatViewModelTest {
     }
 
     @Test
-    fun `onSendClicked while already streaming does nothing`() = runTest {
+    fun `onSendClicked while already streaming does nothing`() = runTest(testDispatcher) {
         coEvery { sendMessageUseCase(testSessionId, any()) } returns flowOf("Response")
         viewModel = createViewModel()
 
@@ -304,7 +304,7 @@ class ChatViewModelTest {
     }
 
     @Test
-    fun `onSendClicked trims whitespace`() = runTest {
+    fun `onSendClicked trims whitespace`() = runTest(testDispatcher) {
         coEvery { sendMessageUseCase(testSessionId, any()) } returns flowOf("Response")
         viewModel = createViewModel()
 
@@ -317,7 +317,7 @@ class ChatViewModelTest {
     }
 
     @Test
-    fun `streaming error sets errorMessageResId and stops streaming`() = runTest {
+    fun `streaming error sets errorMessageResId and stops streaming`() = runTest(testDispatcher) {
         coEvery { sendMessageUseCase(testSessionId, any()) } returns flow {
             throw RuntimeException("Network error")
         }
@@ -347,7 +347,7 @@ class ChatViewModelTest {
     }
 
     @Test
-    fun `streaming error with null message uses default error message`() = runTest {
+    fun `streaming error with null message uses default error message`() = runTest(testDispatcher) {
         coEvery { sendMessageUseCase(testSessionId, any()) } returns flow {
             throw RuntimeException()
         }
@@ -370,7 +370,7 @@ class ChatViewModelTest {
     }
 
     @Test
-    fun `onRetryClicked clears errorMessageResId`() = runTest {
+    fun `onRetryClicked clears errorMessageResId`() = runTest(testDispatcher) {
         coEvery { sendMessageUseCase(testSessionId, any()) } returns flow {
             throw RuntimeException("Error")
         }
@@ -396,7 +396,7 @@ class ChatViewModelTest {
     }
 
     @Test
-    fun `successful send after error recovery`() = runTest {
+    fun `successful send after error recovery`() = runTest(testDispatcher) {
         var callCount = 0
         coEvery { sendMessageUseCase(testSessionId, any()) } answers {
             if (callCount++ == 0) {
@@ -440,7 +440,7 @@ class ChatViewModelTest {
     }
 
     @Test
-    fun `streaming handoff clears streamingText when Room emits`() = runTest {
+    fun `streaming handoff clears streamingText when Room emits`() = runTest(testDispatcher) {
         val initialMessages = emptyList<ChatMessage>()
         val updatedMessages = listOf(
             ChatMessage(
@@ -498,7 +498,7 @@ class ChatViewModelTest {
     }
 
     @Test
-    fun `streaming handoff preserves streamingText while isStreaming is true`() = runTest {
+    fun `streaming handoff preserves streamingText while isStreaming is true`() = runTest(testDispatcher) {
         val messagesBeforeSend = listOf(testMessages[0])
         val messagesAfterSend = testMessages
 
@@ -541,7 +541,7 @@ class ChatViewModelTest {
     }
 
     @Test
-    fun `multiple rapid input changes only emit latest state`() = runTest {
+    fun `multiple rapid input changes only emit latest state`() = runTest(testDispatcher) {
         viewModel = createViewModel()
 
         viewModel.uiState.test {
@@ -559,7 +559,7 @@ class ChatViewModelTest {
     }
 
     @Test
-    fun `sendJob is cancelled when new send starts`() = runTest {
+    fun `sendJob is cancelled when new send starts`() = runTest(testDispatcher) {
         var collectCount = 0
         coEvery { sendMessageUseCase(testSessionId, any()) } returns flow {
             collectCount++
@@ -588,7 +588,7 @@ class ChatViewModelTest {
     }
 
     @Test
-    fun `empty streaming response completes successfully`() = runTest {
+    fun `empty streaming response completes successfully`() = runTest(testDispatcher) {
         coEvery { sendMessageUseCase(testSessionId, any()) } returns flowOf()
         viewModel = createViewModel()
 
@@ -614,7 +614,7 @@ class ChatViewModelTest {
     }
 
     @Test
-    fun `single chunk streaming response`() = runTest {
+    fun `single chunk streaming response`() = runTest(testDispatcher) {
         coEvery { sendMessageUseCase(testSessionId, any()) } returns flowOf("Single chunk")
         viewModel = createViewModel()
 

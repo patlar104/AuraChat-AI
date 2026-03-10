@@ -1,0 +1,29 @@
+{
+	"version": "2.0.0",
+	"tasks": [
+		{
+			"label": "Android Unit Tests",
+			"type": "shell",
+			"command": "./gradlew :app:testDebugUnitTest",
+			"isBackground": false,
+			"problemMatcher": [],
+			"group": "test"
+		},
+		{
+			"label": "Clean + Android Unit Tests",
+			"type": "shell",
+			"command": "./gradlew clean :app:testDebugUnitTest",
+			"isBackground": false,
+			"problemMatcher": [],
+			"group": "test"
+		},
+		{
+			"label": "Force Rerun Tests",
+			"type": "shell",
+			"command": "./gradlew :app:testDebugUnitTest --rerun-tasks 2>&1 | grep -E 'FAILED|PASSED|tests completed|BUILD'",
+			"isBackground": false,
+			"problemMatcher": [],
+			"group": "test"
+		}
+	]
+}
