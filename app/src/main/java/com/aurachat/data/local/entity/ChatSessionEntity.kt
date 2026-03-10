@@ -5,6 +5,15 @@ import androidx.room.Entity
 import androidx.room.PrimaryKey
 import com.aurachat.domain.model.ChatSession
 
+/**
+ * Room entity representing a row in the `chat_sessions` table.
+ *
+ * The [updatedAt] column is indexed for efficient `ORDER BY updated_at DESC` queries
+ * used when loading the history drawer.
+ *
+ * Use [toDomain] to convert to the domain [ChatSession] model, and [ChatSession.toEntity]
+ * to convert back for persistence.
+ */
 @Entity(tableName = "chat_sessions")
 data class ChatSessionEntity(
     @PrimaryKey(autoGenerate = true)
@@ -17,30 +26,32 @@ data class ChatSessionEntity(
     @ColumnInfo(name = "created_at")
     val createdAt: Long,
 
-    @ColumnInfo(name = "updated_at", index = true) // Index for ORDER BY performance
+    @ColumnInfo(name = "updated_at", index = true)
     val updatedAt: Long,
 
     @ColumnInfo(name = "message_count")
     val messageCount: Int = 0,
 
     @ColumnInfo(name = "last_message_preview")
-    val lastMessagePreview: String = ""
+    val lastMessagePreview: String = "",
 )
 
+/** Maps this entity to the domain [ChatSession] model. */
 fun ChatSessionEntity.toDomain() = ChatSession(
     id = id,
     title = title,
     createdAt = createdAt,
     updatedAt = updatedAt,
     messageCount = messageCount,
-    lastMessagePreview = lastMessagePreview
+    lastMessagePreview = lastMessagePreview,
 )
 
+/** Maps the domain [ChatSession] to its Room entity representation. */
 fun ChatSession.toEntity() = ChatSessionEntity(
     id = id,
     title = title,
     createdAt = createdAt,
     updatedAt = updatedAt,
     messageCount = messageCount,
-    lastMessagePreview = lastMessagePreview
+    lastMessagePreview = lastMessagePreview,
 )

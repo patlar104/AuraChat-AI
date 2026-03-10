@@ -18,6 +18,15 @@
     <string name="chat_send">Send</string>
     <string name="chat_retry">Try again</string>
 
+    <!-- Drawer / History -->
+    <string name="drawer_title">Conversations</string>
+    <string name="drawer_no_conversations">No conversations yet</string>
+
+    <!-- Content Descriptions -->
+    <string name="cd_open_drawer">Open navigation drawer</string>
+    <string name="cd_user_avatar">User avatar</string>
+    <string name="cd_delete_session">Delete conversation</string>
+
     <!-- Error Messages -->
     <string name="error_create_session">Failed to create chat session. Please try again.</string>
     <string name="error_network">Network error. Please check your connection.</string>

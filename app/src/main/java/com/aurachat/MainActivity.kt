@@ -28,6 +28,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
@@ -40,15 +41,31 @@ import com.aurachat.ui.theme.AuraChatTheme
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.launch
 
-// Route constants — will be moved to a dedicated NavRoutes file in a later phase
+/**
+ * Navigation route constants for the AuraChat app.
+ *
+ * All route strings are defined here to keep navigation configuration in one place
+ * and to avoid typo-prone string literals scattered across the NavHost.
+ */
 object NavRoutes {
+    /** Route for the home/start screen. */
     const val HOME = "home"
+    /** Route template for a chat session screen; requires a `sessionId` Long argument. */
     const val CHAT = "chat/{sessionId}"
+    /** Route for the settings screen (Phase 7). */
     const val SETTINGS = "settings"
 
+    /** Builds a fully-resolved chat route for [sessionId]. */
     fun chat(sessionId: Long) = "chat/$sessionId"
 }
 
+/**
+ * The app's single activity.
+ *
+ * Hosts the Compose navigation graph within a [ModalNavigationDrawer]. The drawer
+ * shows the conversation history ([DrawerContent]); the main content area is a
+ * [NavHost] with routes for home, chat, and settings.
+ */
 @AndroidEntryPoint
 class MainActivity : ComponentActivity() {
     @OptIn(ExperimentalMaterial3Api::class)
@@ -81,7 +98,7 @@ class MainActivity : ComponentActivity() {
                             CenterAlignedTopAppBar(
                                 title = {
                                     Text(
-                                        text = "AuraChat",
+                                        text = stringResource(R.string.app_name),
                                         style = MaterialTheme.typography.titleLarge,
                                     )
                                 },
@@ -91,7 +108,7 @@ class MainActivity : ComponentActivity() {
                                     }) {
                                         Icon(
                                             imageVector = Icons.Default.Menu,
-                                            contentDescription = "Open navigation drawer",
+                                            contentDescription = stringResource(R.string.cd_open_drawer),
                                         )
                                     }
                                 },
@@ -103,7 +120,7 @@ class MainActivity : ComponentActivity() {
                                         IconButton(onClick = {}) {
                                             Icon(
                                                 imageVector = Icons.Default.Person,
-                                                contentDescription = "User avatar",
+                                                contentDescription = stringResource(R.string.cd_user_avatar),
                                                 tint = MaterialTheme.colorScheme.onPrimaryContainer,
                                             )
                                         }
@@ -133,7 +150,7 @@ class MainActivity : ComponentActivity() {
                             composable(
                                 route = NavRoutes.CHAT,
                                 arguments = listOf(
-                                    navArgument("sessionId") { type = NavType.LongType }
+                                    navArgument("sessionId") { type = NavType.LongType },
                                 ),
                             ) {
                                 // sessionId is automatically injected into ChatViewModel

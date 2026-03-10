@@ -8,6 +8,18 @@ import androidx.room.PrimaryKey
 import com.aurachat.domain.model.ChatMessage
 import com.aurachat.domain.model.MessageRole
 
+/**
+ * Room entity representing a row in the `chat_messages` table.
+ *
+ * A composite index on `(session_id, timestamp)` enables efficient `ORDER BY timestamp ASC`
+ * queries scoped to a single session. Deleting a parent [ChatSessionEntity] cascades to
+ * all child messages via the [ForeignKey.CASCADE] constraint.
+ *
+ * Note: [ChatMessage.isStreaming] is a runtime-only flag and is intentionally not persisted.
+ *
+ * Use [toDomain] to convert to the domain [ChatMessage] model, and [ChatMessage.toEntity]
+ * to convert back for persistence.
+ */
 @Entity(
     tableName = "chat_messages",
     foreignKeys = [
@@ -15,13 +27,13 @@ import com.aurachat.domain.model.MessageRole
             entity = ChatSessionEntity::class,
             parentColumns = ["id"],
             childColumns = ["session_id"],
-            onDelete = ForeignKey.CASCADE // Deleting a session cascades to all its messages
+            onDelete = ForeignKey.CASCADE,
         )
     ],
     indices = [
         Index(value = ["session_id"]),
-        Index(value = ["session_id", "timestamp"]) // Composite for ORDER BY within session
-    ]
+        Index(value = ["session_id", "timestamp"]),
+    ],
 )
 data class ChatMessageEntity(
     @PrimaryKey(autoGenerate = true)
@@ -34,34 +46,34 @@ data class ChatMessageEntity(
     @ColumnInfo(name = "content")
     val content: String,
 
+    /** Stored as the enum name (`"USER"` or `"MODEL"`); reconstructed via [MessageRole.valueOf]. */
     @ColumnInfo(name = "role")
-    val role: String, // Stored as "USER" or "MODEL"; reconstructed via MessageRole.valueOf()
+    val role: String,
 
     @ColumnInfo(name = "timestamp")
     val timestamp: Long,
 
-    // isStreaming deliberately omitted — runtime-only, never persisted
-
     @ColumnInfo(name = "is_error")
-    val isError: Boolean = false
+    val isError: Boolean = false,
 )
 
+/** Maps this entity to the domain [ChatMessage] model. [ChatMessage.isStreaming] is always false when reading from DB. */
 fun ChatMessageEntity.toDomain() = ChatMessage(
     id = id,
     sessionId = sessionId,
     content = content,
     role = MessageRole.valueOf(role),
     timestamp = timestamp,
-    isStreaming = false, // Always false when reading from DB
-    isError = isError
+    isStreaming = false,
+    isError = isError,
 )
 
+/** Maps the domain [ChatMessage] to its Room entity representation. [ChatMessage.isStreaming] is not mapped — not a DB field. */
 fun ChatMessage.toEntity() = ChatMessageEntity(
     id = id,
     sessionId = sessionId,
     content = content,
     role = role.name,
     timestamp = timestamp,
-    isError = isError
-    // isStreaming not mapped — not a DB field
+    isError = isError,
 )

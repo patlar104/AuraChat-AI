@@ -25,13 +25,24 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.aurachat.R
 import com.aurachat.domain.model.ChatSession
 
+/**
+ * Navigation drawer content showing the full conversation history.
+ *
+ * Each session row supports swipe-to-delete (end-to-start gesture). Tapping a row
+ * navigates to that session via [onNavigateToSession].
+ *
+ * @param onNavigateToSession Called with the session ID when the user taps a history item.
+ * @param viewModel Hilt-injected [HistoryViewModel]; override in tests/previews.
+ */
 @Composable
 fun DrawerContent(
     onNavigateToSession: (Long) -> Unit,
@@ -42,7 +53,7 @@ fun DrawerContent(
     LazyColumn(modifier = Modifier.fillMaxHeight()) {
         item {
             Text(
-                text = "AuraChat",
+                text = stringResource(R.string.drawer_title),
                 style = MaterialTheme.typography.titleLarge,
                 color = MaterialTheme.colorScheme.primary,
                 modifier = Modifier.padding(horizontal = 16.dp, vertical = 20.dp),
@@ -53,7 +64,7 @@ fun DrawerContent(
         if (uiState.sessions.isEmpty() && !uiState.isLoading) {
             item {
                 Text(
-                    text = "No conversations yet",
+                    text = stringResource(R.string.drawer_no_conversations),
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.padding(16.dp),
@@ -101,7 +112,7 @@ private fun SwipeToDeleteSessionItem(
             ) {
                 Icon(
                     imageVector = Icons.Default.Delete,
-                    contentDescription = "Delete session",
+                    contentDescription = stringResource(R.string.cd_delete_session),
                     tint = MaterialTheme.colorScheme.error,
                 )
             }

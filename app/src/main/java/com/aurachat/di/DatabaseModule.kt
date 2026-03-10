@@ -15,29 +15,43 @@ import dagger.hilt.android.qualifiers.ApplicationContext
 import dagger.hilt.components.SingletonComponent
 import javax.inject.Singleton
 
+/**
+ * Hilt module that provides the Room database and its DAOs.
+ *
+ * Destructive migration is enabled for development — replace with a proper
+ * [androidx.room.migration.Migration] before shipping to production.
+ */
 @Module
 @InstallIn(SingletonComponent::class)
 object DatabaseModule {
 
+    /** Provides the singleton [AuraChatDatabase] instance built from the application context. */
     @Provides
     @Singleton
     fun provideDatabase(@ApplicationContext context: Context): AuraChatDatabase =
         Room.databaseBuilder(
             context,
             AuraChatDatabase::class.java,
-            AuraChatDatabase.DATABASE_NAME
+            AuraChatDatabase.DATABASE_NAME,
         )
         .fallbackToDestructiveMigration(dropAllTables = true)
         .build()
 
+    /** Provides the [ChatSessionDao] sourced from the singleton database. */
     @Provides
     fun provideChatSessionDao(db: AuraChatDatabase): ChatSessionDao = db.chatSessionDao()
 
+    /** Provides the [ChatMessageDao] sourced from the singleton database. */
     @Provides
     fun provideChatMessageDao(db: AuraChatDatabase): ChatMessageDao = db.chatMessageDao()
 }
 
-// @Binds requires an abstract function, so it lives in a separate abstract module
+/**
+ * Hilt module that binds [RoomChatRepository] as the [ChatRepository] implementation.
+ *
+ * [@Binds] requires an abstract function, which is why this lives in a separate
+ * abstract module from [DatabaseModule].
+ */
 @Module
 @InstallIn(SingletonComponent::class)
 abstract class RepositoryModule {

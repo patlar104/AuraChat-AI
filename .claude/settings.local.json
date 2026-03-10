@@ -7,10 +7,31 @@
       "Edit(*)",
       "Glob(*)",
       "Grep(*)",
+      "Agent(*)",
+      "Skill(*)",
+      "Task(*)",
+      "Cron(*)",
+      "WebFetch(*)",
+      "WebSearch(*)",
       "mcp__Desktop_Commander__*",
       "mcp__Context7__*",
-      "Skill(commit-commands:commit-push-pr)",
-      "Skill(commit-commands:commit-push-pr:*)"
+      "mcp__claude_ai_Context7__*",
+      "mcp__claude_ai_Supabase__*",
+      "mcp__claude_ai_Hugging_Face__*"
+    ]
+  },
+  "hooks": {
+    "PostToolUse": [
+      {
+        "matcher": "Write|Edit|MultiEdit|NotebookEdit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 \"$CLAUDE_PROJECT_DIR\"/.claude/hooks/post-tool-call.py",
+            "async": true
+          }
+        ]
+      }
     ]
   }
 }
