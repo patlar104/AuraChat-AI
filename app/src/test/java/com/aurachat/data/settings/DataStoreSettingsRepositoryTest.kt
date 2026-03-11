@@ -1,46 +1,58 @@
 package com.aurachat.data.settings
 
 import androidx.datastore.core.DataStore
-import androidx.datastore.preferences.core.MutablePreferences
+import androidx.datastore.preferences.core.PreferenceDataStoreFactory
 import androidx.datastore.preferences.core.Preferences
+import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.emptyPreferences
-import androidx.datastore.preferences.core.mutablePreferencesOf
 import androidx.datastore.preferences.core.preferencesOf
 import androidx.datastore.preferences.core.stringPreferencesKey
 import app.cash.turbine.test
 import com.aurachat.util.Constants
-import io.mockk.coEvery
-import io.mockk.coVerify
 import io.mockk.every
 import io.mockk.mockk
-import io.mockk.slot
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.flowOf
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Before
 import org.junit.Test
+import java.io.File
 import java.io.IOException
+import kotlin.io.path.createTempDirectory
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class DataStoreSettingsRepositoryTest {
 
-    private lateinit var dataStore: DataStore<Preferences>
+    private lateinit var mockDataStore: DataStore<Preferences>
     private lateinit var repository: DataStoreSettingsRepository
 
     private val key = stringPreferencesKey("selected_model")
 
     @Before
     fun setup() {
-        dataStore = mockk()
+        mockDataStore = mockk()
     }
 
-    private fun createRepository() = DataStoreSettingsRepository(dataStore)
+    private fun createRepository(
+        dataStore: DataStore<Preferences> = mockDataStore,
+    ) = DataStoreSettingsRepository(dataStore)
+
+    private fun TestScope.createRealDataStore(): DataStore<Preferences> {
+        val directory = createTempDirectory(prefix = "settings-test-").toFile()
+        val file = File(directory, "settings.preferences_pb")
+        return PreferenceDataStoreFactory.create(
+            scope = backgroundScope,
+            produceFile = { file },
+        )
+    }
 
     @Test
     fun `selectedModel emits DEFAULT_MODEL when key is absent`() = runTest {
-        every { dataStore.data } returns flowOf(emptyPreferences())
+        every { mockDataStore.data } returns flowOf(emptyPreferences())
 
         repository = createRepository()
 
@@ -53,7 +65,7 @@ class DataStoreSettingsRepositoryTest {
     @Test
     fun `selectedModel emits stored value when key is present`() = runTest {
         val storedModel = "gemini-1.5-pro"
-        every { dataStore.data } returns flowOf(preferencesOf(key to storedModel))
+        every { mockDataStore.data } returns flowOf(preferencesOf(key to storedModel))
 
         repository = createRepository()
 
@@ -65,7 +77,7 @@ class DataStoreSettingsRepositoryTest {
 
     @Test
     fun `selectedModel emits DEFAULT_MODEL when IOException is thrown`() = runTest {
-        every { dataStore.data } returns flow {
+        every { mockDataStore.data } returns flow {
             throw IOException("disk read error")
         }
 
@@ -79,7 +91,7 @@ class DataStoreSettingsRepositoryTest {
 
     @Test
     fun `selectedModel rethrows non-IOException errors`() = runTest {
-        every { dataStore.data } returns flow {
+        every { mockDataStore.data } returns flow {
             throw IllegalStateException("unexpected")
         }
 
@@ -93,32 +105,21 @@ class DataStoreSettingsRepositoryTest {
 
     @Test
     fun `setSelectedModel writes correct key-value pair to DataStore`() = runTest {
-        val transformSlot = slot<suspend (MutablePreferences) -> Unit>()
-        val fakePrefs = mutablePreferencesOf()
-        coEvery { dataStore.edit(capture(transformSlot)) } coAnswers {
-            transformSlot.captured.invoke(fakePrefs)
-            fakePrefs
-        }
-
-        repository = createRepository()
+        val dataStore = createRealDataStore()
+        repository = createRepository(dataStore)
         repository.setSelectedModel("gemini-1.5-flash")
 
-        assertEquals("gemini-1.5-flash", fakePrefs[key])
-        coVerify(exactly = 1) { dataStore.edit(any()) }
+        assertEquals("gemini-1.5-flash", dataStore.data.first()[key])
     }
 
     @Test
     fun `setSelectedModel overwrites previously stored model`() = runTest {
-        val transformSlot = slot<suspend (MutablePreferences) -> Unit>()
-        val fakePrefs = mutablePreferencesOf(key to "gemini-2.0-flash")
-        coEvery { dataStore.edit(capture(transformSlot)) } coAnswers {
-            transformSlot.captured.invoke(fakePrefs)
-            fakePrefs
-        }
+        val dataStore = createRealDataStore()
+        dataStore.edit { prefs -> prefs[key] = "gemini-2.0-flash" }
 
-        repository = createRepository()
+        repository = createRepository(dataStore)
         repository.setSelectedModel("gemini-1.5-pro")
 
-        assertEquals("gemini-1.5-pro", fakePrefs[key])
+        assertEquals("gemini-1.5-pro", dataStore.data.first()[key])
     }
 }

@@ -10,3 +10,41 @@
 - Never hardcode secrets or API keys. `BuildConfig.GEMINI_API_KEY` must remain sourced from `local.properties`.
 - When editing Gradle, Compose, Room, or coroutine code, prefer project conventions over generic Android boilerplate.
 - See [CLAUDE.md](../CLAUDE.md) for the current project roadmap and feature-phase context.
+  See [CLAUDE.md](../CLAUDE.md) for the current project roadmap and feature-phase context.
+
+# Agent Prompt Examples
+
+- "Build the app and run unit tests"
+- "Add a new use case to domain/usecase for chat summarization"
+- "Fix Room streaming bug in ChatViewModel"
+- "Polish error state UI in ChatScreen"
+- "Implement SettingsScreen with model picker and About section"
+
+# Specialized Instructions
+
+## Tests
+
+- applyTo: **/src/test/**
+- Use JUnit 4, MockK, Turbine, kotlinx-coroutines-test
+- Prefer coroutine test dispatchers and Room in-memory DB for unit tests
+- Keep test names descriptive and phase-aligned
+
+## Settings Phase (P8)
+
+- applyTo: **/presentation/settings/**, **/data/settings/**
+- Use DataStore for settings persistence
+- SettingsRepository must expose selected model as Flow<String>
+- SettingsViewModel should update model selection atomically
+
+## Polish Phase (P9)
+
+- applyTo: **/presentation/**, **/ui/components/**
+- Add error state handling, retry logic, typing indicator animation, and screen transitions
+- Prefer explicit UI state and minimal side effects
+
+# Custom Agent Hooks/Skills
+
+- Streaming chat: Use explicit streamingText in ChatUiState, clear atomically with Room emission
+- Room observation: Prefer StateFlow, avoid race-prone ownership
+- Error handling: Add retry logic and error state composables
+- Navigation: Typed route contracts, long args for chat/{sessionId}
