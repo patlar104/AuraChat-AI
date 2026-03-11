@@ -90,7 +90,8 @@ private fun ChatContent(
 ) {
     val listState = rememberLazyListState()
 
-    val totalItemCount = uiState.messages.size + if (uiState.streamingText != null) 1 else 0
+    val showStreamingBubble = uiState.isStreaming && uiState.streamingText != null
+    val totalItemCount = uiState.messages.size + if (showStreamingBubble) 1 else 0
 
     // Scroll to bottom when a new item appears
     LaunchedEffect(totalItemCount) {
@@ -101,7 +102,7 @@ private fun ChatContent(
 
     // Scroll to bottom as streaming chunks arrive
     LaunchedEffect(uiState.streamingText) {
-        if (uiState.streamingText != null && totalItemCount > 0) {
+        if (showStreamingBubble && totalItemCount > 0) {
             listState.animateScrollToItem(totalItemCount - 1)
         }
     }
@@ -138,7 +139,8 @@ private fun ChatContent(
                 MessageBubble(message = message)
             }
 
-            uiState.streamingText?.let { text ->
+            if (showStreamingBubble) {
+                val text = uiState.streamingText.orEmpty()
                 item(key = "streaming_bubble") {
                     MessageBubble(
                         message = ChatMessage(

@@ -230,8 +230,8 @@ class ChatViewModelTest {
 
             // Streaming completes - isStreaming becomes false
             val completedState = awaitItem()
-            assertEquals("Hello there!", completedState.streamingText)
             assertFalse(completedState.isStreaming)
+            assertNull(completedState.streamingText)
         }
 
         coVerify { sendMessageUseCase(testSessionId, "Test message") }
@@ -563,6 +563,55 @@ class ChatViewModelTest {
     }
 
     @Test
+    fun `streaming handoff clears streamingText when Room emits before completion`() = runTest {
+        val messagesBeforeSend = listOf(testMessages[0])
+        val messagesAfterSend = testMessages
+
+        val messagesChannel = Channel<List<ChatMessage>>(Channel.UNLIMITED)
+        every { getMessagesUseCase(testSessionId) } returns messagesChannel.receiveAsFlow()
+
+        val streamingComplete = CompletableDeferred<Unit>()
+        coEvery { sendMessageUseCase(testSessionId, any()) } returns flow {
+            emit("AI response")
+            messagesChannel.trySend(messagesAfterSend)
+            streamingComplete.await()
+        }
+
+        viewModel = createViewModel()
+        messagesChannel.trySend(messagesBeforeSend)
+        advanceUntilIdle()
+
+        viewModel.uiState.test {
+            awaitItem() // initial state with messagesBeforeSend
+
+            viewModel.onInputChanged("Test")
+            awaitItem() // inputText update
+
+            viewModel.onSendClicked()
+            awaitItem() // isStreaming = true, streamingText = ""
+
+            val chunkState = awaitItem()
+            assertEquals("AI response", chunkState.streamingText)
+            assertTrue(chunkState.isStreaming)
+
+            advanceUntilIdle()
+
+            val midState = awaitItem()
+            assertEquals(messagesAfterSend, midState.messages)
+            assertEquals("AI response", midState.streamingText)
+            assertTrue(midState.isStreaming)
+
+            streamingComplete.complete(Unit)
+            advanceUntilIdle()
+
+            val completedState = awaitItem()
+            assertEquals(messagesAfterSend, completedState.messages)
+            assertNull(completedState.streamingText)
+            assertFalse(completedState.isStreaming)
+        }
+    }
+
+    @Test
     fun `multiple rapid input changes only emit latest state`() = runTest {
         viewModel = createViewModel()
 
@@ -632,10 +681,10 @@ class ChatViewModelTest {
 
             advanceUntilIdle()
 
-            // Should complete with empty streamingText
+            // Should complete and clear the temporary streaming handoff
             val completedState = awaitItem()
             assertFalse(completedState.isStreaming)
-            assertEquals("", completedState.streamingText)
+            assertNull(completedState.streamingText)
             assertNull(completedState.errorMessage)
         }
     }
@@ -662,8 +711,8 @@ class ChatViewModelTest {
             assertTrue(streamingState.isStreaming)
 
             val completedState = awaitItem()
-            assertEquals("Single chunk", completedState.streamingText)
             assertFalse(completedState.isStreaming)
+            assertNull(completedState.streamingText)
         }
     }
 }

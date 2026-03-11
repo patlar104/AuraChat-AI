@@ -136,7 +136,10 @@ class ChatViewModel @Inject constructor(
                 }
 
                 _uiState.update { state ->
-                    state.copy(isStreaming = false)
+                    state.copy(
+                        isStreaming = false,
+                        streamingText = null,
+                    )
                 }
 
             } catch (e: Exception) {
