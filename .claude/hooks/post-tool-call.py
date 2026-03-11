@@ -72,12 +72,38 @@ def send_diff_to_webserver(file_path, timestamp_ms):
             f"Unknown error while sending diff to {url}") from e
 
 
-def extract_file_path(tool_name, tool_input):
+def normalize_path(value):
+    if not isinstance(value, str) or not value.strip():
+        return None
+
+    path = Path(value)
+    if not path.is_absolute():
+        path = Path(get_project_root()) / path
+
+    return str(path.resolve())
+
+
+def extract_file_paths(tool_name, tool_input):
+    candidate_paths = []
+
     if tool_name in ["Write", "Edit", "MultiEdit"]:
-        return tool_input.get('file_path', 'unknown')
-    if tool_name == "NotebookEdit":
-        return tool_input.get('notebook_path', 'unknown')
-    return 'unknown'
+        candidate_paths.append(tool_input.get("file_path"))
+    elif tool_name == "NotebookEdit":
+        candidate_paths.append(tool_input.get("notebook_path"))
+    else:
+        candidate_paths.extend(tool_input.get("files", []))
+        candidate_paths.append(tool_input.get("path"))
+        candidate_paths.append(tool_input.get("filePath"))
+
+    unique_paths = []
+    seen = set()
+    for value in candidate_paths:
+        normalized = normalize_path(value)
+        if normalized and normalized not in seen:
+            unique_paths.append(normalized)
+            seen.add(normalized)
+
+    return unique_paths
 
 
 def excepthook(type, value, traceback_):
@@ -90,14 +116,20 @@ def main():
     tool_name = data.get('tool_name', 'unknown')
 
     modification_tools = [
-        "Write", "Edit", "MultiEdit", "NotebookEdit"
+        "Write",
+        "Edit",
+        "MultiEdit",
+        "NotebookEdit",
+        "createFile",
+        "editFiles",
+        "replaceStringInFile",
     ]
 
     if tool_name in modification_tools:
         tool_input = data.get('tool_input', {})
-        file_path = extract_file_path(tool_name, tool_input)
-        if file_path:
-            timestamp_ms = int(datetime.now(timezone.utc).timestamp() * 1000)
+        file_paths = extract_file_paths(tool_name, tool_input)
+        timestamp_ms = int(datetime.now(timezone.utc).timestamp() * 1000)
+        for file_path in file_paths:
             try:
                 send_diff_to_webserver(file_path, timestamp_ms)
             except ProvenanceHookError:
