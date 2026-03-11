@@ -30,5 +30,6 @@
     "**/.gradle": true,
     "**/build": true,
     "**/gradle/wrapper": true
-  }
+  },
+  "java.configuration.updateBuildConfiguration": "automatic"
 }

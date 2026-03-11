@@ -12,6 +12,7 @@ google-services.json
 /.idea/navEditor.xml
 /.idea/assetWizardSettings.xml
 .DS_Store
+*.bak
 /build
 /captures
 .externalNativeBuild
@@ -28,3 +29,12 @@ local.properties
 .worktrees/
 .security-key
 logs/security/
+
+# Assistant and local automation artifacts
+.ai/
+.claude/worktrees/
+.claude/settings.local.json
+
+# Local logs and diagnostics
+firebase-debug.log
+gcm-diagnose.log

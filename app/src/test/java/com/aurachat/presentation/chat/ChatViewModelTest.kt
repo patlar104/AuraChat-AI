@@ -1,5 +1,6 @@
 package com.aurachat.presentation.chat
 
+import android.content.Context
 import androidx.lifecycle.SavedStateHandle
 import app.cash.turbine.test
 import com.aurachat.domain.model.ChatMessage
@@ -34,6 +35,7 @@ import org.junit.Test
 class ChatViewModelTest {
 
     private val testDispatcher = StandardTestDispatcher()
+    private val context: Context = mockk(relaxed = true)
     private lateinit var savedStateHandle: SavedStateHandle
     private lateinit var getMessagesUseCase: GetMessagesUseCase
     private lateinit var sendMessageUseCase: SendMessageUseCase
@@ -74,7 +76,7 @@ class ChatViewModelTest {
     }
 
     private fun createViewModel(): ChatViewModel {
-        return ChatViewModel(savedStateHandle, getMessagesUseCase, sendMessageUseCase)
+        return ChatViewModel(savedStateHandle, context, getMessagesUseCase, sendMessageUseCase)
     }
 
     @Test

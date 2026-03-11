@@ -1,0 +1,11 @@
+{
+  "hooks": {
+    "PostToolUse": [
+      {
+        "type": "command",
+        "command": "./.claude/hooks/run-python-hook.sh post-tool-call.py",
+        "timeout": 5
+      }
+    ]
+  }
+}

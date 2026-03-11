@@ -5,17 +5,55 @@
 # For more details, see
 #   http://developer.android.com/guide/developing/tools/proguard.html
 
-# If your project uses WebView with JS, uncomment the following
-# and specify the fully qualified class name to the JavaScript interface
-# class:
-#-keepclassmembers class fqcn.of.javascript.interface.for.webview {
-#   public *;
-#}
+# Preserve stack trace line numbers for crash reporting
+-keepattributes SourceFile,LineNumberTable
+-renamesourcefileattribute SourceFile
 
-# Uncomment this to preserve the line number information for
-# debugging stack traces.
-#-keepattributes SourceFile,LineNumberTable
+# ---------- Hilt ----------
+# Keep Hilt-generated component classes and injection entry points
+-keep class dagger.hilt.** { *; }
+-keep class javax.inject.** { *; }
+-keep @dagger.hilt.android.lifecycle.HiltViewModel class * { *; }
+-keepclasseswithmembers class * {
+    @javax.inject.Inject <fields>;
+    @javax.inject.Inject <init>(...);
+}
 
-# If you keep the line number information, uncomment this to
-# hide the original source file name.
-#-renamesourcefileattribute SourceFile
+# ---------- Room ----------
+# Keep Room entities (annotated data classes mapped to DB tables)
+-keep @androidx.room.Entity class * { *; }
+# Keep DAO interfaces and their implementations
+-keep @androidx.room.Dao class * { *; }
+-keep class * extends androidx.room.RoomDatabase { *; }
+# Keep Room's generated _Impl classes
+-keep class **_Impl { *; }
+-keep class **_Impl$* { *; }
+
+# ---------- DataStore ----------
+-keep class androidx.datastore.** { *; }
+-keep class androidx.datastore.preferences.** { *; }
+
+# ---------- Firebase / Gemini ----------
+-keep class com.google.firebase.** { *; }
+-keep class com.google.android.gms.** { *; }
+-dontwarn com.google.firebase.**
+
+# ---------- Kotlin ----------
+# Keep Kotlin metadata (required for reflection and coroutines)
+-keepattributes *Annotation*, Signature, InnerClasses, EnclosingMethod
+-keep class kotlin.Metadata { *; }
+-keep class kotlin.coroutines.** { *; }
+-dontwarn kotlin.**
+
+# ---------- Coroutines ----------
+-keepclassmembernames class kotlinx.** {
+    volatile <fields>;
+}
+-dontwarn kotlinx.coroutines.**
+
+# ---------- Coil ----------
+-keep class coil.** { *; }
+-dontwarn coil.**
+
+# ---------- Timber ----------
+-dontwarn org.slf4j.**
