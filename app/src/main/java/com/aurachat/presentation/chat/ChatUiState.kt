@@ -24,4 +24,8 @@ data class ChatUiState(
 
     // Non-null when the user has picked an image to attach to the next message
     val pendingImageUri: Uri? = null,
+
+    // Stored when a send fails so the Retry button can re-send without re-typing
+    val lastFailedPrompt: String? = null,
+    val lastFailedImageUri: Uri? = null,
 )

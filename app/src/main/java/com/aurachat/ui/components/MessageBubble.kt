@@ -7,12 +7,17 @@ import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -68,26 +73,31 @@ fun MessageBubble(message: ChatMessage) {
                 )
                 .padding(horizontal = 14.dp, vertical = 10.dp),
         ) {
-            Row(verticalAlignment = Alignment.Bottom) {
-                if (isUser || message.isError) {
-                    // User messages and error text use plain Text — no markdown needed
-                    Text(
-                        text = message.content,
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = if (message.isError)
-                            MaterialTheme.colorScheme.error
-                        else
-                            MaterialTheme.colorScheme.onBackground,  // #E8EAED
-                    )
-                } else {
-                    // Model responses render markdown: bold, italic, code blocks, bullets
-                    MarkdownText(
-                        text = message.content,
-                        modifier = Modifier.weight(1f, fill = false),
-                    )
-                }
-                if (message.isStreaming) {
-                    StreamingCursor()
+            // Streaming started but no content yet — show animated typing indicator
+            if (!isUser && message.isStreaming && message.content.isEmpty()) {
+                TypingIndicator()
+            } else {
+                Row(verticalAlignment = Alignment.Bottom) {
+                    if (isUser || message.isError) {
+                        // User messages and error text use plain Text — no markdown needed
+                        Text(
+                            text = message.content,
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = if (message.isError)
+                                MaterialTheme.colorScheme.error
+                            else
+                                MaterialTheme.colorScheme.onBackground,  // #E8EAED
+                        )
+                    } else {
+                        // Model responses render markdown: bold, italic, code blocks, bullets
+                        MarkdownText(
+                            text = message.content,
+                            modifier = Modifier.weight(1f, fill = false),
+                        )
+                    }
+                    if (message.isStreaming) {
+                        StreamingCursor()
+                    }
                 }
             }
         }
@@ -107,6 +117,45 @@ fun MessageBubble(message: ChatMessage) {
         }
     }
 }
+
+// ── Typing indicator ───────────────────────────────────────────────────────────
+
+@Composable
+private fun TypingIndicator() {
+    val infiniteTransition = rememberInfiniteTransition(label = "typing_indicator")
+    Row(
+        horizontalArrangement = Arrangement.spacedBy(4.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        modifier = Modifier.padding(vertical = 4.dp, horizontal = 2.dp),
+    ) {
+        repeat(3) { index ->
+            val alpha by infiniteTransition.animateFloat(
+                initialValue = 0.3f,
+                targetValue = 1f,
+                animationSpec = infiniteRepeatable(
+                    animation = tween(
+                        durationMillis = 600,
+                        delayMillis = index * 200,
+                        easing = LinearEasing,
+                    ),
+                    repeatMode = RepeatMode.Reverse,
+                ),
+                label = "dot_alpha_$index",
+            )
+            Box(
+                modifier = Modifier
+                    .size(8.dp)
+                    .alpha(alpha)
+                    .background(
+                        color = MaterialTheme.colorScheme.primary,
+                        shape = CircleShape,
+                    ),
+            )
+        }
+    }
+}
+
+// ── Streaming cursor ───────────────────────────────────────────────────────────
 
 @Composable
 private fun StreamingCursor() {

@@ -32,10 +32,21 @@ object Constants {
      */
     object Gemini {
         /**
-         * The Gemini model used for all chat requests.
+         * Default Gemini model used when no user preference is stored.
          * gemini-2.0-flash retires June 1 2026; using 2.5-flash (stable, no -preview suffix).
          */
-        const val MODEL_NAME = "gemini-2.5-flash"
+        const val DEFAULT_MODEL = "gemini-2.5-flash"
+
+        /** Kept for backward compatibility — equals [DEFAULT_MODEL]. */
+        const val MODEL_NAME = DEFAULT_MODEL
+
+        /** Models available in the Settings model picker, ordered newest-first. */
+        val AVAILABLE_MODELS = listOf(
+            "gemini-2.5-flash",
+            "gemini-2.0-flash",
+            "gemini-1.5-flash",
+            "gemini-1.5-pro",
+        )
 
         /**
          * Maximum number of prior messages included in the chat history context

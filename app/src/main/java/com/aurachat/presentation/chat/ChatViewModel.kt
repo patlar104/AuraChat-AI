@@ -77,7 +77,10 @@ class ChatViewModel @Inject constructor(
     }
 
     fun onRetryClicked() {
-        _uiState.update { it.copy(errorMessage = null) }
+        val state = _uiState.value
+        val prompt = state.lastFailedPrompt ?: return
+        _uiState.update { it.copy(errorMessage = null, lastFailedPrompt = null, lastFailedImageUri = null) }
+        startSend(prompt, state.lastFailedImageUri)
     }
 
     fun onImageSelected(uri: Uri) {
@@ -144,6 +147,8 @@ class ChatViewModel @Inject constructor(
                         streamingText = null,
                         errorMessage = e.message ?: "Something went wrong. Please try again.",
                         inputText = prompt,
+                        lastFailedPrompt = prompt,
+                        lastFailedImageUri = imageUri,
                     )
                 }
             }

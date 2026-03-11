@@ -4,13 +4,14 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideInHorizontally
+import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Menu
-import androidx.compose.material.icons.filled.Person
+import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.CenterAlignedTopAppBar
 import androidx.compose.material3.DrawerValue
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -20,13 +21,10 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalDrawerSheet
 import androidx.compose.material3.ModalNavigationDrawer
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.rememberDrawerState
-import androidx.compose.runtime.Composable
 import androidx.compose.runtime.rememberCoroutineScope
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.navigation.NavType
@@ -37,6 +35,7 @@ import androidx.navigation.navArgument
 import com.aurachat.presentation.chat.ChatScreen
 import com.aurachat.presentation.history.DrawerContent
 import com.aurachat.presentation.home.HomeScreen
+import com.aurachat.presentation.settings.SettingsScreen
 import com.aurachat.ui.theme.AuraChatTheme
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.launch
@@ -52,7 +51,7 @@ object NavRoutes {
     const val HOME = "home"
     /** Route template for a chat session screen; requires a `sessionId` Long argument. */
     const val CHAT = "chat/{sessionId}"
-    /** Route for the settings screen (Phase 7). */
+    /** Route for the settings screen. */
     const val SETTINGS = "settings"
 
     /** Builds a fully-resolved chat route for [sessionId]. */
@@ -65,6 +64,8 @@ object NavRoutes {
  * Hosts the Compose navigation graph within a [ModalNavigationDrawer]. The drawer
  * shows the conversation history ([DrawerContent]); the main content area is a
  * [NavHost] with routes for home, chat, and settings.
+ *
+ * All screen-to-screen navigations use slide + fade transitions for a polished feel.
  */
 @AndroidEntryPoint
 class MainActivity : ComponentActivity() {
@@ -113,17 +114,14 @@ class MainActivity : ComponentActivity() {
                                     }
                                 },
                                 actions = {
-                                    Surface(
-                                        shape = CircleShape,
-                                        color = MaterialTheme.colorScheme.primaryContainer,
-                                    ) {
-                                        IconButton(onClick = {}) {
-                                            Icon(
-                                                imageVector = Icons.Default.Person,
-                                                contentDescription = stringResource(R.string.cd_user_avatar),
-                                                tint = MaterialTheme.colorScheme.onPrimaryContainer,
-                                            )
-                                        }
+                                    IconButton(onClick = {
+                                        navController.navigate(NavRoutes.SETTINGS)
+                                    }) {
+                                        Icon(
+                                            imageVector = Icons.Default.Settings,
+                                            contentDescription = stringResource(R.string.cd_open_settings),
+                                            tint = MaterialTheme.colorScheme.onBackground,
+                                        )
                                     }
                                 },
                                 colors = TopAppBarDefaults.topAppBarColors(
@@ -139,6 +137,18 @@ class MainActivity : ComponentActivity() {
                             navController = navController,
                             startDestination = NavRoutes.HOME,
                             modifier = Modifier.padding(innerPadding),
+                            enterTransition = {
+                                slideInHorizontally(initialOffsetX = { it }) + fadeIn()
+                            },
+                            exitTransition = {
+                                slideOutHorizontally(targetOffsetX = { -it }) + fadeOut()
+                            },
+                            popEnterTransition = {
+                                slideInHorizontally(initialOffsetX = { -it }) + fadeIn()
+                            },
+                            popExitTransition = {
+                                slideOutHorizontally(targetOffsetX = { it }) + fadeOut()
+                            },
                         ) {
                             composable(NavRoutes.HOME) {
                                 HomeScreen(
@@ -157,20 +167,13 @@ class MainActivity : ComponentActivity() {
                                 // via SavedStateHandle by Hilt + Navigation Compose
                                 ChatScreen()
                             }
-                            composable(NavRoutes.SETTINGS) { SettingsPlaceholder() }
+                            composable(NavRoutes.SETTINGS) {
+                                SettingsScreen()
+                            }
                         }
                     }
                 }
             }
         }
-    }
-}
-
-// ── Phase placeholders — replaced when each feature phase is implemented ──────
-
-@Composable
-private fun SettingsPlaceholder() {
-    Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-        Text("Settings — Phase 7", color = androidx.compose.ui.graphics.Color.White)
     }
 }
