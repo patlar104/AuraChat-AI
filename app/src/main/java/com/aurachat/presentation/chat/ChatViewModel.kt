@@ -29,7 +29,7 @@ import javax.inject.Inject
 @HiltViewModel
 class ChatViewModel @Inject constructor(
     savedStateHandle: SavedStateHandle,
-    @ApplicationContext private val context: Context,
+    @param:ApplicationContext private val context: Context,
     private val getMessages: GetMessagesUseCase,
     private val sendMessage: SendMessageUseCase,
 ) : ViewModel() {
