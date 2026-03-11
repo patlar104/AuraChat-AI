@@ -1,5 +1,9 @@
 package com.aurachat.presentation.chat
 
+import android.net.Uri
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.PickVisualMediaRequest
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -16,8 +20,11 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Send
+import androidx.compose.material.icons.filled.AddPhotoAlternate
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.HorizontalDivider
@@ -33,11 +40,13 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import coil.compose.AsyncImage
 import com.aurachat.R
 import com.aurachat.domain.model.ChatMessage
 import com.aurachat.domain.model.MessageRole
@@ -48,11 +57,25 @@ fun ChatScreen(
     viewModel: ChatViewModel = hiltViewModel(),
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+
+    // Photo picker — returns URI or null if the user cancelled
+    val imagePicker = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.PickVisualMedia()
+    ) { uri: Uri? ->
+        uri?.let { viewModel.onImageSelected(it) }
+    }
+
     ChatContent(
         uiState = uiState,
         onInputChanged = viewModel::onInputChanged,
         onSendClicked = viewModel::onSendClicked,
         onRetryClicked = viewModel::onRetryClicked,
+        onAttachClicked = {
+            imagePicker.launch(
+                PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)
+            )
+        },
+        onClearImage = viewModel::onClearImage,
     )
 }
 
@@ -62,20 +85,21 @@ private fun ChatContent(
     onInputChanged: (String) -> Unit,
     onSendClicked: () -> Unit,
     onRetryClicked: () -> Unit,
+    onAttachClicked: () -> Unit,
+    onClearImage: () -> Unit,
 ) {
     val listState = rememberLazyListState()
 
-    // Total visible items: DB messages + optional streaming bubble
     val totalItemCount = uiState.messages.size + if (uiState.streamingText != null) 1 else 0
 
-    // Scroll to bottom when a new item appears (new DB message or streaming bubble starts)
+    // Scroll to bottom when a new item appears
     LaunchedEffect(totalItemCount) {
         if (totalItemCount > 0) {
             listState.animateScrollToItem(totalItemCount - 1)
         }
     }
 
-    // Scroll to bottom as streaming chunks arrive (keeps growing bubble in view)
+    // Scroll to bottom as streaming chunks arrive
     LaunchedEffect(uiState.streamingText) {
         if (uiState.streamingText != null && totalItemCount > 0) {
             listState.animateScrollToItem(totalItemCount - 1)
@@ -107,7 +131,6 @@ private fun ChatContent(
                 }
             }
 
-            // Persisted messages from Room — stable keys prevent scroll jumps on recomposition
             items(
                 items = uiState.messages,
                 key = { message -> message.id },
@@ -115,7 +138,6 @@ private fun ChatContent(
                 MessageBubble(message = message)
             }
 
-            // Live streaming bubble — synthesized from streamingText, not from DB
             uiState.streamingText?.let { text ->
                 item(key = "streaming_bubble") {
                     MessageBubble(
@@ -131,7 +153,6 @@ private fun ChatContent(
                 }
             }
 
-            // Inline error row shown below the last message
             uiState.errorMessage?.let { errorMsg ->
                 item(key = "error_row") {
                     ErrorRow(message = errorMsg, onRetry = onRetryClicked)
@@ -144,14 +165,74 @@ private fun ChatContent(
             thickness = 0.5.dp,
         )
 
+        // Image preview strip — shown above the input bar when an image is pending
+        uiState.pendingImageUri?.let { uri ->
+            ImagePreviewStrip(uri = uri, onClear = onClearImage)
+        }
+
         ChatInputBar(
             text = uiState.inputText,
             isStreaming = uiState.isStreaming,
             onTextChanged = onInputChanged,
             onSendClicked = onSendClicked,
+            onAttachClicked = onAttachClicked,
         )
     }
 }
+
+// ── Image preview strip ────────────────────────────────────────────────────────
+
+@Composable
+private fun ImagePreviewStrip(
+    uri: Uri,
+    onClear: () -> Unit,
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .background(MaterialTheme.colorScheme.surfaceVariant)
+            .padding(horizontal = 12.dp, vertical = 6.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Box {
+            AsyncImage(
+                model = uri,
+                contentDescription = stringResource(R.string.cd_image_preview),
+                modifier = Modifier
+                    .size(72.dp)
+                    .clip(RoundedCornerShape(8.dp)),
+                contentScale = ContentScale.Crop,
+            )
+            // Clear button overlaid on the top-right corner of the thumbnail
+            IconButton(
+                onClick = onClear,
+                modifier = Modifier
+                    .align(Alignment.TopEnd)
+                    .size(24.dp),
+            ) {
+                Icon(
+                    imageVector = Icons.Default.Close,
+                    contentDescription = stringResource(R.string.cd_clear_image),
+                    tint = MaterialTheme.colorScheme.onSurface,
+                    modifier = Modifier
+                        .size(16.dp)
+                        .background(
+                            color = MaterialTheme.colorScheme.surface.copy(alpha = 0.8f),
+                            shape = RoundedCornerShape(50),
+                        ),
+                )
+            }
+        }
+        Spacer(Modifier.width(8.dp))
+        Text(
+            text = stringResource(R.string.chat_image_attached),
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+    }
+}
+
+// ── Input bar ──────────────────────────────────────────────────────────────────
 
 @Composable
 private fun ChatInputBar(
@@ -159,20 +240,37 @@ private fun ChatInputBar(
     isStreaming: Boolean,
     onTextChanged: (String) -> Unit,
     onSendClicked: () -> Unit,
+    onAttachClicked: () -> Unit,
 ) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
             .background(MaterialTheme.colorScheme.surfaceVariant)
-            .padding(horizontal = 12.dp, vertical = 8.dp),
+            .padding(horizontal = 8.dp, vertical = 8.dp),
         verticalAlignment = Alignment.Bottom,
     ) {
+        // Attach image button
+        IconButton(
+            onClick = onAttachClicked,
+            enabled = !isStreaming,
+            modifier = Modifier.size(48.dp),
+        ) {
+            Icon(
+                imageVector = Icons.Default.AddPhotoAlternate,
+                contentDescription = stringResource(R.string.cd_attach_image),
+                tint = if (!isStreaming)
+                    MaterialTheme.colorScheme.primary
+                else
+                    MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
+
         OutlinedTextField(
             value = text,
             onValueChange = onTextChanged,
             modifier = Modifier
                 .weight(1f)
-                .padding(end = 8.dp),
+                .padding(horizontal = 4.dp),
             placeholder = {
                 Text(
                     text = stringResource(R.string.chat_input_placeholder),
@@ -218,6 +316,8 @@ private fun ChatInputBar(
         }
     }
 }
+
+// ── Error row ──────────────────────────────────────────────────────────────────
 
 @Composable
 private fun ErrorRow(

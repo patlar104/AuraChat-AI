@@ -1,5 +1,6 @@
 package com.aurachat.domain.usecase
 
+import android.graphics.Bitmap
 import com.aurachat.data.remote.GeminiDataSource
 import com.aurachat.domain.error.DomainError
 import com.aurachat.domain.model.ChatMessage
@@ -26,11 +27,18 @@ class SendMessageUseCase @Inject constructor(
      * 4. Saves the completed AI response to Room
      * 5. Auto-titles the session from the first user message (first exchange only)
      *
+     * [imageBitmap] is optional. When provided, it is sent to Gemini as an inline
+     * image for vision-based queries (Gemini Vision API).
+     *
      * Returns Flow<String> — the ViewModel collects chunks and appends them to a
-     * MutableStateFlow<String> to drive the streaming bubble in the chat UI (Phase 5).
+     * MutableStateFlow<String> to drive the streaming bubble in the chat UI.
      */
-    operator fun invoke(sessionId: Long, userPrompt: String): Flow<String> = flow {
-        Timber.d("SendMessageUseCase invoked for sessionId=$sessionId, prompt=${userPrompt.take(30)}...")
+    operator fun invoke(
+        sessionId: Long,
+        userPrompt: String,
+        imageBitmap: Bitmap? = null,
+    ): Flow<String> = flow {
+        Timber.d("SendMessageUseCase invoked for sessionId=$sessionId, hasImage=${imageBitmap != null}, prompt=${userPrompt.take(30)}...")
 
         // Validate input
         if (userPrompt.isBlank()) {
@@ -61,7 +69,7 @@ class SendMessageUseCase @Inject constructor(
             // Stream from Gemini, re-emitting each chunk to the collector (ViewModel)
             Timber.d("Starting Gemini streaming request")
             val fullResponse = StringBuilder()
-            geminiDataSource.sendMessage(historyBefore, userPrompt)
+            geminiDataSource.sendMessage(historyBefore, userPrompt, imageBitmap)
                 .catch { e ->
                     Timber.e(e, "Gemini streaming error: ${e.javaClass.simpleName}")
                     throw when (e) {

@@ -12,12 +12,13 @@ PRD: `/Users/patricklarocque/Downloads/AuraChat_PRD.docx`
 - DI: Hilt
 - Nav: Navigation Compose
 - Image: Coil
-- Build: Gradle KTS, AGP 9.2.0-alpha02, Kotlin 2.1.0
+- Build: Gradle KTS, AGP 9.2.0-alpha03, Kotlin 2.3.10, KSP 2.3.6
 
 ## Key Config Notes
-- AGP 9.2.0-alpha02 bundles Kotlin Android internally — do NOT apply `kotlin.android` plugin explicitly (causes duplicate extension error)
+- AGP 9.2.0-alpha03 bundles Kotlin Android internally — do NOT apply `kotlin.android` plugin explicitly (causes duplicate extension error)
 - `compileSdk` uses AGP 9.x DSL: `compileSdk { version = release(36) { minorApiLevel = 1 } }`
-- KSP version must match Kotlin: `2.1.0-1.0.29`
+- KSP version is `2.3.6` (must match Kotlin 2.3.10)
+- ⚠️ IDE shows Kotlin version mismatch errors (IDE Kotlin plugin < 2.3.10) — these are IDE-only, Gradle build is fine
 - Gemini API key loaded from `local.properties` → `BuildConfig.GEMINI_API_KEY`
 
 ## Package Structure
@@ -31,19 +32,25 @@ PRD: `/Users/patricklarocque/Downloads/AuraChat_PRD.docx`
 - `presentation/home/` — HomeScreen, HomeViewModel
 - `presentation/chat/` — ChatScreen, ChatViewModel
 - `presentation/history/` — DrawerContent, HistoryViewModel
-- `presentation/settings/` — SettingsScreen, SettingsViewModel
+- `presentation/settings/` — SettingsScreen, SettingsViewModel (Phase 7 — not yet created)
 - `ui/theme/` — Color.kt, Type.kt, Theme.kt
-- `ui/components/` — shared composables (MessageBubble)
+- `ui/components/` — shared composables (MessageBubble, MarkdownText)
 
 ## Build Status by Phase
-- Phase 1 ✅ — Theme (Color/Type/Theme.kt), MainActivity with NavHost + ModalNavigationDrawer
-- Phase 2 ✅ — Room entities, DAOs, Database, Repository
-- Phase 3 ✅ — GeminiDataSource + streaming Flow + SendMessageUseCase
-- Phase 4 ✅ — HomeScreen + HomeViewModel (suggestion chips, HomeInputBar, navigateToSessionId nav)
-- Phase 5 ✅ — ChatScreen, ChatViewModel, streaming bubble, MessageBubble
-- Phase 6 ⬜ — DrawerContent, HistoryViewModel, swipe-to-delete
-- Phase 7 ⬜ — SettingsScreen, EncryptedSharedPreferences, DataStore
-- Phase 8 ⬜ — Animations, error handling, polish
+*(Task Plan uses 9 phases P1–P9; mapped here to 8 for clarity)*
+- Phase 1 ✅ — Project setup, Gradle, Hilt, Theme (Color/Type/Theme.kt), MainActivity scaffold
+- Phase 2 ✅ — Room entities, DAOs, AuraChatDatabase, DatabaseModule
+- Phase 3 ✅ — FirebaseAIDataSource streaming Flow, AIModule, GeminiDataSourceImpl
+- Phase 4 ✅ — ChatRepository interface + RoomChatRepository, RepositoryModule, all 7 use cases
+- Phase 5 ✅ — ChatScreen, ChatViewModel, streaming bubble, MessageBubble, Markdown rendering (MarkdownText.kt), Image attachment (photo picker → Bitmap → GeminiVision)
+- Phase 6 ✅ — DrawerContent, HistoryViewModel (search filter), swipe-to-delete (SwipeToDismissBox end-to-start, CASCADE delete)
+- Phase 7 ⬜ — Settings: DataStore + SettingsRepository (P8-T1), SettingsScreen + SettingsViewModel (P8-T2), wire model selection to AIModule (P8-T3)
+- Phase 8 ⬜ — Polish: error states + retry (P9-T1), typing indicator animation (P9-T2), screen transitions (P9-T3), final review (P9-T4)
+
+## Phase 7 — Settings Detail (next up)
+- P8-T1: `SettingsRepository` interface + `DataStoreSettingsRepository`; key = selected model (default `gemini-2.0-flash`); available models: `['gemini-2.0-flash', 'gemini-1.5-flash', 'gemini-1.5-pro']`; add `SettingsModule` Hilt binding
+- P8-T2: `SettingsViewModel` reads/writes via SettingsRepository; `SettingsScreen` with RadioButton model picker + About section (app version, GitHub link)
+- P8-T3: Update `AIModule` / `GeminiModule` to read selected model from `SettingsRepository` so model switch in settings affects next chat
 
 ## Nav Routes (MainActivity.kt — NavRoutes object)
 - `home` → HomeScreen ✅

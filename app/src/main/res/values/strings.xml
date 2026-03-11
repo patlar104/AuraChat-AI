@@ -22,10 +22,16 @@
     <string name="drawer_title">Conversations</string>
     <string name="drawer_no_conversations">No conversations yet</string>
 
+    <!-- Chat image attachment -->
+    <string name="chat_image_attached">Image attached</string>
+
     <!-- Content Descriptions -->
     <string name="cd_open_drawer">Open navigation drawer</string>
     <string name="cd_user_avatar">User avatar</string>
     <string name="cd_delete_session">Delete conversation</string>
+    <string name="cd_attach_image">Attach image</string>
+    <string name="cd_image_preview">Selected image preview</string>
+    <string name="cd_clear_image">Remove image</string>
 
     <!-- Error Messages -->
     <string name="error_create_session">Failed to create chat session. Please try again.</string>

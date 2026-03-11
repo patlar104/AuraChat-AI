@@ -1,5 +1,6 @@
 package com.aurachat.presentation.chat
 
+import android.net.Uri
 import com.aurachat.domain.model.ChatMessage
 
 data class ChatUiState(
@@ -20,4 +21,7 @@ data class ChatUiState(
 
     // True until the first Room emission arrives on screen open
     val isLoadingMessages: Boolean = true,
+
+    // Non-null when the user has picked an image to attach to the next message
+    val pendingImageUri: Uri? = null,
 )

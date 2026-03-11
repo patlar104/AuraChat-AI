@@ -1,5 +1,6 @@
 package com.aurachat.data.remote
 
+import android.graphics.Bitmap
 import com.aurachat.domain.model.ChatMessage
 import com.aurachat.domain.model.MessageRole
 import com.aurachat.util.Constants
@@ -20,22 +21,48 @@ import javax.inject.Singleton
  * emits non-empty text chunks as they arrive from the model. History is capped at
  * [Constants.Gemini.HISTORY_LIMIT] messages and error messages are excluded to avoid
  * confusing the model with failed responses.
+ *
+ * When [imageBitmap] is provided, the request is sent as a multimodal vision query
+ * using [GenerativeModel.generateContentStream] with the full history included manually,
+ * since the Chat session API accepts text-only prompts.
  */
 @Singleton
 class GeminiDataSourceImpl @Inject constructor(
     private val model: GenerativeModel,
 ) : GeminiDataSource {
 
-    override fun sendMessage(history: List<ChatMessage>, userPrompt: String): Flow<String> {
-        Timber.d("Starting Gemini stream: historySize=%d prompt=%s", history.size, userPrompt.take(80))
-        val chat = model.startChat(history = buildChatHistory(history))
-        return chat.sendMessageStream(userPrompt)
-            .map { response -> response.text ?: "" }
-            .filter { it.isNotEmpty() }
+    override fun sendMessage(
+        history: List<ChatMessage>,
+        userPrompt: String,
+        imageBitmap: Bitmap?,
+    ): Flow<String> {
+        Timber.d("Starting Gemini stream: historySize=%d hasImage=%b prompt=%s",
+            history.size, imageBitmap != null, userPrompt.take(80))
+
+        return if (imageBitmap != null) {
+            // Vision path: build the full content list (history + image + text) and
+            // pass it to generateContentStream, which accepts multimodal Content objects.
+            val allContent = buildChatHistory(history) + listOf(
+                content("user") {
+                    image(imageBitmap)
+                    text(userPrompt)
+                }
+            )
+            model.generateContentStream(*allContent.toTypedArray())
+                .map { response -> response.text ?: "" }
+                .filter { it.isNotEmpty() }
+        } else {
+            // Text-only path: use the Chat session API for clean conversation management
+            val chat = model.startChat(history = buildChatHistory(history))
+            chat.sendMessageStream(userPrompt)
+                .map { response -> response.text ?: "" }
+                .filter { it.isNotEmpty() }
+        }
     }
 
     /**
-     * Maps domain [ChatMessage] list to Firebase [Content] list for `startChat(history)`.
+     * Maps domain [ChatMessage] list to Firebase [Content] list for `startChat(history)`
+     * or multimodal `generateContentStream` calls.
      *
      * Rules:
      * - [MessageRole.USER] messages → role `"user"`

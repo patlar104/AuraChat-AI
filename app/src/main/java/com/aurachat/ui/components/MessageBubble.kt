@@ -46,13 +46,19 @@ private val ModelBubbleShape = RoundedCornerShape(
 fun MessageBubble(message: ChatMessage) {
     val isUser = message.role == MessageRole.USER
 
+    // Model bubbles expand to show markdown content; user bubbles cap at 280dp
+    val bubbleModifier = if (isUser) {
+        Modifier.widthIn(max = 280.dp)
+    } else {
+        Modifier.fillMaxWidth(0.92f)
+    }
+
     Column(
         modifier = Modifier.fillMaxWidth(),
         horizontalAlignment = if (isUser) Alignment.End else Alignment.Start,
     ) {
         Box(
-            modifier = Modifier
-                .widthIn(max = 280.dp)
+            modifier = bubbleModifier
                 .background(
                     color = if (isUser)
                         MaterialTheme.colorScheme.primaryContainer   // #1A2D4D
@@ -63,14 +69,23 @@ fun MessageBubble(message: ChatMessage) {
                 .padding(horizontal = 14.dp, vertical = 10.dp),
         ) {
             Row(verticalAlignment = Alignment.Bottom) {
-                Text(
-                    text = message.content,
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = if (message.isError)
-                        MaterialTheme.colorScheme.error
-                    else
-                        MaterialTheme.colorScheme.onBackground,      // #E8EAED
-                )
+                if (isUser || message.isError) {
+                    // User messages and error text use plain Text — no markdown needed
+                    Text(
+                        text = message.content,
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = if (message.isError)
+                            MaterialTheme.colorScheme.error
+                        else
+                            MaterialTheme.colorScheme.onBackground,  // #E8EAED
+                    )
+                } else {
+                    // Model responses render markdown: bold, italic, code blocks, bullets
+                    MarkdownText(
+                        text = message.content,
+                        modifier = Modifier.weight(1f, fill = false),
+                    )
+                }
                 if (message.isStreaming) {
                     StreamingCursor()
                 }
