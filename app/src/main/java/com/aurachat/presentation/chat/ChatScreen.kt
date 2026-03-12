@@ -18,6 +18,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -93,17 +94,17 @@ private fun ChatContent(
     val showStreamingBubble = uiState.isStreaming && uiState.streamingText != null
     val totalItemCount = uiState.messages.size + if (showStreamingBubble) 1 else 0
 
-    // Scroll to bottom when a new item appears
+    // Animate only when the list shape changes and the user is already near the bottom.
     LaunchedEffect(totalItemCount) {
-        if (totalItemCount > 0) {
+        if (totalItemCount > 0 && listState.isNearBottom(totalItemCount)) {
             listState.animateScrollToItem(totalItemCount - 1)
         }
     }
 
-    // Scroll to bottom as streaming chunks arrive
+    // Streaming updates can arrive many times per second, so keep this scroll cheap.
     LaunchedEffect(uiState.streamingText) {
-        if (showStreamingBubble && totalItemCount > 0) {
-            listState.animateScrollToItem(totalItemCount - 1)
+        if (showStreamingBubble && totalItemCount > 0 && listState.isNearBottom(totalItemCount)) {
+            listState.scrollToItem(totalItemCount - 1)
         }
     }
 
@@ -180,6 +181,15 @@ private fun ChatContent(
             onAttachClicked = onAttachClicked,
         )
     }
+}
+
+private fun LazyListState.isNearBottom(
+    totalItemCount: Int,
+    threshold: Int = 1,
+): Boolean {
+    if (totalItemCount == 0) return true
+    val lastVisibleIndex = layoutInfo.visibleItemsInfo.lastOrNull()?.index ?: return true
+    return lastVisibleIndex >= totalItemCount - 1 - threshold
 }
 
 // ── Image preview strip ────────────────────────────────────────────────────────
