@@ -19,6 +19,27 @@ class SendMessageUseCase @Inject constructor(
     private val geminiDataSource: GeminiDataSource,
     private val updateSessionTitle: UpdateSessionTitleUseCase,
 ) {
+    operator fun invoke(
+        sessionId: Long,
+        userPrompt: String,
+    ): Flow<String> = invoke(
+        sessionId = sessionId,
+        userPrompt = userPrompt,
+        imageBitmap = null,
+        imageUri = null,
+    )
+
+    operator fun invoke(
+        sessionId: Long,
+        userPrompt: String,
+        imageBitmap: Bitmap?,
+    ): Flow<String> = invoke(
+        sessionId = sessionId,
+        userPrompt = userPrompt,
+        imageBitmap = imageBitmap,
+        imageUri = null,
+    )
+
     /**
      * Orchestrates a full send/receive cycle:
      * 1. Snapshots history before saving (to detect first-ever message for auto-titling)

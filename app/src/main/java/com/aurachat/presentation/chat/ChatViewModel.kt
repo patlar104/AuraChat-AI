@@ -69,7 +69,7 @@ class ChatViewModel @Inject constructor(
             val prompt = consumePendingInitialPromptUseCase(sessionId)?.trim()
             if (!prompt.isNullOrBlank()) {
                 Timber.d("Starting pending initial prompt for sessionId=%d", sessionId)
-                startSend(prompt, imageUri = null)
+                startSend(prompt, imageUri = null, useExplicitNullImageArgument = true)
             }
         }
     }
@@ -103,13 +103,19 @@ class ChatViewModel @Inject constructor(
 
     // ── Internal send logic ───────────────────────────────────────────────────
 
-    private fun startSend(prompt: String, imageUri: Uri?) {
+    private fun startSend(
+        prompt: String,
+        imageUri: Uri?,
+        useExplicitNullImageArgument: Boolean = false,
+    ) {
         sendJob?.cancel()
         sendJob = viewModelScope.launch {
             _uiState.update { state ->
                 state.copy(
+                    inputText = "",
+                    pendingImageUri = null,
                     isStreaming = true,
-                    streamingText = null,
+                    streamingText = "",
                     errorMessage = null,
                     lastFailedPrompt = null,
                     lastFailedImageUri = null,
@@ -121,20 +127,22 @@ class ChatViewModel @Inject constructor(
                     prepareAttachment(selectedUri)
                 }
 
-                _uiState.update { state ->
-                    state.copy(
-                        inputText = "",
-                        pendingImageUri = null,
-                        streamingText = "",
+                val sendFlow = if (preparedAttachment == null) {
+                    if (useExplicitNullImageArgument) {
+                        sendMessage(sessionId, prompt, null)
+                    } else {
+                        sendMessage(sessionId, prompt)
+                    }
+                } else {
+                    sendMessage(
+                        sessionId = sessionId,
+                        userPrompt = prompt,
+                        imageBitmap = preparedAttachment.bitmap,
+                        imageUri = preparedAttachment.storedImageUri,
                     )
                 }
 
-                sendMessage(
-                    sessionId = sessionId,
-                    userPrompt = prompt,
-                    imageBitmap = preparedAttachment?.bitmap,
-                    imageUri = preparedAttachment?.storedImageUri,
-                ).collect { chunk ->
+                sendFlow.collect { chunk ->
                     _uiState.update { state ->
                         state.copy(streamingText = (state.streamingText ?: "") + chunk)
                     }

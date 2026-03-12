@@ -78,12 +78,26 @@ object ImageAttachmentStore {
         bitmap: Bitmap,
         maxEdgePx: Int,
     ): Bitmap {
-        val longestEdge = maxOf(bitmap.width, bitmap.height)
-        if (longestEdge <= maxEdgePx) return bitmap
+        val (scaledWidth, scaledHeight) = calculateScaledDimensions(
+            width = bitmap.width,
+            height = bitmap.height,
+            maxEdgePx = maxEdgePx,
+        )
+        if (scaledWidth == bitmap.width && scaledHeight == bitmap.height) return bitmap
+        return Bitmap.createScaledBitmap(bitmap, scaledWidth, scaledHeight, true)
+    }
+
+    internal fun calculateScaledDimensions(
+        width: Int,
+        height: Int,
+        maxEdgePx: Int,
+    ): Pair<Int, Int> {
+        val longestEdge = maxOf(width, height)
+        if (longestEdge <= maxEdgePx) return width to height
 
         val scale = maxEdgePx.toFloat() / longestEdge.toFloat()
-        val scaledWidth = (bitmap.width * scale).toInt().coerceAtLeast(1)
-        val scaledHeight = (bitmap.height * scale).toInt().coerceAtLeast(1)
-        return Bitmap.createScaledBitmap(bitmap, scaledWidth, scaledHeight, true)
+        val scaledWidth = (width * scale).toInt().coerceAtLeast(1)
+        val scaledHeight = (height * scale).toInt().coerceAtLeast(1)
+        return scaledWidth to scaledHeight
     }
 }
