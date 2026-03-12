@@ -1,122 +1,74 @@
 package com.aurachat.domain.usecase
 
+import com.aurachat.domain.error.DomainError
 import com.aurachat.domain.repository.ChatRepository
+import com.aurachat.testutil.assertThrowsSuspend
 import io.mockk.coEvery
 import io.mockk.coVerify
 import io.mockk.mockk
-import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.runTest
-import org.junit.Before
-import org.junit.Test
+import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.BeforeEach
+import org.junit.jupiter.params.ParameterizedTest
+import org.junit.jupiter.params.provider.Arguments
+import org.junit.jupiter.params.provider.MethodSource
+import java.util.stream.Stream
 
-@OptIn(ExperimentalCoroutinesApi::class)
 class UpdateSessionTitleUseCaseTest {
 
     private lateinit var repository: ChatRepository
     private lateinit var useCase: UpdateSessionTitleUseCase
 
-    @Before
-    fun setup() {
+    @BeforeEach
+    fun setUp() {
         repository = mockk(relaxed = true)
         useCase = UpdateSessionTitleUseCase(repository)
     }
 
-    @Test
-    fun `invoke updates session title`() = runTest {
-        // Given: Repository can update session title
-        val sessionId = 123L
-        val newTitle = "Updated Chat Title"
-        coEvery { repository.updateSessionTitle(sessionId, newTitle) } returns Unit
-
-        // When: Invoke use case
-        useCase(sessionId, newTitle)
-
-        // Then: Should call repository updateSessionTitle
-        coVerify { repository.updateSessionTitle(sessionId, newTitle) }
-    }
-
-    @Test(expected = com.aurachat.domain.error.DomainError.ValidationError::class)
-    fun `invoke throws ValidationError for empty title`() = runTest {
-        // Given: Empty title
-        val sessionId = 456L
-        val emptyTitle = ""
-
-        // When: Invoke use case
-        // Then: Should throw ValidationError
-        useCase(sessionId, emptyTitle)
-    }
-
-    @Test
-    fun `invoke updates session with long title`() = runTest {
-        // Given: Long title
-        val sessionId = 789L
-        val longTitle = "This is a very long session title that contains many characters and exceeds typical length"
-        coEvery { repository.updateSessionTitle(sessionId, longTitle) } returns Unit
-
-        // When: Invoke use case
-        useCase(sessionId, longTitle)
-
-        // Then: Should call repository with long title
-        coVerify { repository.updateSessionTitle(sessionId, longTitle) }
-    }
-
-    @Test
-    fun `invoke updates different session IDs correctly`() = runTest {
-        // Given: Multiple session IDs and titles
-        val sessionId1 = 111L
-        val sessionId2 = 222L
-        val title1 = "Title 1"
-        val title2 = "Title 2"
-        coEvery { repository.updateSessionTitle(any(), any()) } returns Unit
-
-        // When: Invoke use case with different IDs and titles
-        useCase(sessionId1, title1)
-        useCase(sessionId2, title2)
-
-        // Then: Should call repository for each update
-        coVerify { repository.updateSessionTitle(sessionId1, title1) }
-        coVerify { repository.updateSessionTitle(sessionId2, title2) }
-    }
-
-    @Test
-    fun `invoke updates session with special characters in title`() = runTest {
-        // Given: Title with special characters
-        val sessionId = 999L
-        val specialTitle = "Chat with 🤖 AI & special chars: @#$%"
-        coEvery { repository.updateSessionTitle(sessionId, specialTitle) } returns Unit
-
-        // When: Invoke use case
-        useCase(sessionId, specialTitle)
-
-        // Then: Should call repository with special characters
-        coVerify { repository.updateSessionTitle(sessionId, specialTitle) }
-    }
-
-    @Test
-    fun `invoke updates session title for session ID zero`() = runTest {
-        // Given: Session ID is zero
-        val sessionId = 0L
-        val title = "Title for zero ID"
+    @ParameterizedTest(name = "{index}: sessionId={0}, title=''{1}''")
+    @MethodSource("validUpdates")
+    fun `invoke updates valid session titles`(
+        sessionId: Long,
+        title: String,
+    ) = runTest {
         coEvery { repository.updateSessionTitle(sessionId, title) } returns Unit
 
-        // When: Invoke use case
         useCase(sessionId, title)
 
-        // Then: Should call repository with ID zero
-        coVerify { repository.updateSessionTitle(sessionId, title) }
-    }
-
-    @Test
-    fun `invoke delegates to repository exactly once per call`() = runTest {
-        // Given: Repository can update session title
-        val sessionId = 654L
-        val title = "Test Title"
-        coEvery { repository.updateSessionTitle(sessionId, title) } returns Unit
-
-        // When: Invoke use case
-        useCase(sessionId, title)
-
-        // Then: Should call repository exactly once
         coVerify(exactly = 1) { repository.updateSessionTitle(sessionId, title) }
+    }
+
+    @ParameterizedTest(name = "{index}: title=''{0}''")
+    @MethodSource("blankTitles")
+    fun `invoke rejects blank titles`(title: String) = runTest {
+        assertThrowsSuspend<DomainError.ValidationError> { useCase(123L, title) }
+    }
+
+    @ParameterizedTest(name = "{index}: sessionId={0}, title=''{1}''")
+    @MethodSource("validUpdates")
+    fun `invoke wraps unexpected repository errors`(
+        sessionId: Long,
+        title: String,
+    ) = runTest {
+        coEvery { repository.updateSessionTitle(sessionId, title) } throws IllegalStateException("boom")
+
+        val error = assertThrowsSuspend<DomainError.DatabaseError> { useCase(sessionId, title) }
+
+        assertEquals("Failed to update session title: boom", error.message)
+    }
+
+    private companion object {
+        @JvmStatic
+        fun validUpdates(): Stream<Arguments> = Stream.of(
+            Arguments.of(123L, "Updated Chat Title"),
+            Arguments.of(0L, "Title for zero ID"),
+            Arguments.of(999L, "Chat with 🤖 AI & special chars: @#$%"),
+        )
+
+        @JvmStatic
+        fun blankTitles(): Stream<Arguments> = Stream.of(
+            Arguments.of(""),
+            Arguments.of("   "),
+        )
     }
 }

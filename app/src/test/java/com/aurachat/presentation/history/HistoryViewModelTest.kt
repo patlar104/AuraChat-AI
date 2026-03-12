@@ -1,166 +1,112 @@
 package com.aurachat.presentation.history
 
-import app.cash.turbine.test
 import com.aurachat.domain.model.ChatSession
 import com.aurachat.domain.usecase.DeleteSessionUseCase
 import com.aurachat.domain.usecase.GetSessionsUseCase
+import com.aurachat.testutil.MainDispatcherExtension
+import com.aurachat.testutil.SharedFlowSubject
+import com.aurachat.testutil.StateFlowSubject
+import com.aurachat.testutil.runTest
 import io.mockk.coEvery
 import io.mockk.coVerify
 import io.mockk.every
 import io.mockk.mockk
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.flow
-import kotlinx.coroutines.flow.flowOf
-import kotlinx.coroutines.test.StandardTestDispatcher
-import kotlinx.coroutines.test.advanceUntilIdle
-import kotlinx.coroutines.test.resetMain
-import kotlinx.coroutines.test.runTest
-import kotlinx.coroutines.test.setMain
-import org.junit.After
-import org.junit.Assert.assertEquals
-import org.junit.Assert.assertFalse
-import org.junit.Assert.assertTrue
-import org.junit.Before
-import org.junit.Test
+import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertFalse
+import org.junit.jupiter.api.Assertions.assertTrue
+import org.junit.jupiter.api.BeforeEach
+import org.junit.jupiter.api.Test
+import org.junit.jupiter.api.extension.RegisterExtension
 
-@OptIn(ExperimentalCoroutinesApi::class)
 class HistoryViewModelTest {
 
-    private val testDispatcher = StandardTestDispatcher()
+    @JvmField
+    @RegisterExtension
+    val mainDispatcher = MainDispatcherExtension()
+
     private lateinit var getSessions: GetSessionsUseCase
     private lateinit var deleteSession: DeleteSessionUseCase
+    private lateinit var sessionsFlow: SharedFlowSubject<List<ChatSession>>
     private lateinit var viewModel: HistoryViewModel
 
     private val session1 = ChatSession(
         id = 1L,
         title = "Session One",
-        createdAt = 1000L,
-        updatedAt = 2000L,
+        createdAt = 1_000L,
+        updatedAt = 2_000L,
         messageCount = 3,
-        lastMessagePreview = "Hello"
+        lastMessagePreview = "Hello",
     )
     private val session2 = ChatSession(
         id = 2L,
         title = "Session Two",
-        createdAt = 3000L,
-        updatedAt = 4000L,
+        createdAt = 3_000L,
+        updatedAt = 4_000L,
         messageCount = 1,
-        lastMessagePreview = "World"
+        lastMessagePreview = "World",
     )
 
-    @Before
-    fun setup() {
-        Dispatchers.setMain(testDispatcher)
+    @BeforeEach
+    fun setUp() {
         getSessions = mockk()
-        deleteSession = mockk()
+        deleteSession = mockk(relaxed = true)
+        sessionsFlow = SharedFlowSubject()
+        every { getSessions() } returns sessionsFlow.flow
     }
 
-    @After
-    fun tearDown() {
-        Dispatchers.resetMain()
-    }
-
-    private fun createViewModel(): HistoryViewModel =
-        HistoryViewModel(getSessions, deleteSession)
-
-    @Test
-    fun `initial state has isLoading true and empty sessions before flow emits`() = runTest {
-        every { getSessions() } returns flowOf()
-
-        viewModel = createViewModel()
-
-        viewModel.uiState.test {
-            val state = awaitItem()
-            assertTrue(state.isLoading)
-            assertEquals(emptyList<ChatSession>(), state.sessions)
-        }
+    private fun createViewModel(): HistoryViewModel {
+        viewModel = HistoryViewModel(getSessions, deleteSession)
+        return viewModel
     }
 
     @Test
-    fun `sessions are populated and isLoading becomes false when flow emits`() = runTest {
-        every { getSessions() } returns flowOf(listOf(session1, session2))
+    fun `initial state stays loading until the first sessions emission arrives`() = mainDispatcher.runTest {
+        createViewModel()
 
-        viewModel = createViewModel()
-
-        viewModel.uiState.test {
-            awaitItem() // initial state
-
-            advanceUntilIdle()
-
-            val loaded = awaitItem()
-            assertFalse(loaded.isLoading)
-            assertEquals(listOf(session1, session2), loaded.sessions)
-        }
+        assertTrue(viewModel.uiState.value.isLoading)
+        assertEquals(emptyList<ChatSession>(), viewModel.uiState.value.sessions)
     }
 
     @Test
-    fun `sessions update when flow emits a new list`() = runTest {
-        val updatedList = listOf(session1)
-        every { getSessions() } returns flow {
-            emit(listOf(session1, session2))
-            emit(updatedList)
-        }
+    fun `sessions flow updates the visible history list`() = mainDispatcher.runTest {
+        createViewModel()
+        mainDispatcher.scheduler.runCurrent()
 
-        viewModel = createViewModel()
+        sessionsFlow.tryEmit(listOf(session1, session2))
+        mainDispatcher.scheduler.advanceUntilIdle()
 
-        viewModel.uiState.test {
-            awaitItem() // initial
-
-            advanceUntilIdle()
-
-            val first = awaitItem()
-            assertEquals(listOf(session1, session2), first.sessions)
-
-            val second = awaitItem()
-            assertEquals(updatedList, second.sessions)
-        }
+        assertFalse(viewModel.uiState.value.isLoading)
+        assertEquals(listOf(session1, session2), viewModel.uiState.value.sessions)
     }
 
     @Test
-    fun `error in sessions flow sets isLoading false and keeps sessions empty`() = runTest {
-        every { getSessions() } returns flow {
-            throw RuntimeException("DB error")
-        }
+    fun `flow failure exits loading state cleanly`() = mainDispatcher.runTest {
+        every { getSessions() } returns flow { throw IllegalStateException("DB error") }
+        createViewModel()
 
-        viewModel = createViewModel()
+        mainDispatcher.scheduler.advanceUntilIdle()
 
-        viewModel.uiState.test {
-            awaitItem() // initial
-
-            advanceUntilIdle()
-
-            val errorState = awaitItem()
-            assertFalse(errorState.isLoading)
-            assertEquals(emptyList<ChatSession>(), errorState.sessions)
-        }
+        assertFalse(viewModel.uiState.value.isLoading)
+        assertEquals(emptyList<ChatSession>(), viewModel.uiState.value.sessions)
     }
 
     @Test
-    fun `deleteSession calls DeleteSessionUseCase with correct id`() = runTest {
-        every { getSessions() } returns flowOf(listOf(session1))
-        coEvery { deleteSession.invoke(any()) } returns Unit
+    fun `delete request delegates once and later flow emissions update the list`() = mainDispatcher.runTest {
+        val statefulSessions = StateFlowSubject(listOf(session1, session2))
+        every { getSessions() } returns statefulSessions.flow
+        coEvery { deleteSession.invoke(session1.id) } returns Unit
+        createViewModel()
 
-        viewModel = createViewModel()
-        advanceUntilIdle()
-
+        mainDispatcher.scheduler.advanceUntilIdle()
         viewModel.deleteSession(session1.id)
-        advanceUntilIdle()
+        mainDispatcher.scheduler.advanceUntilIdle()
 
         coVerify(exactly = 1) { deleteSession.invoke(session1.id) }
-    }
 
-    @Test
-    fun `deleteSession with zero id still delegates to use case`() = runTest {
-        every { getSessions() } returns flowOf(emptyList())
-        coEvery { deleteSession.invoke(any()) } returns Unit
+        statefulSessions.value = listOf(session2)
+        mainDispatcher.scheduler.advanceUntilIdle()
 
-        viewModel = createViewModel()
-        advanceUntilIdle()
-
-        viewModel.deleteSession(0L)
-        advanceUntilIdle()
-
-        coVerify(exactly = 1) { deleteSession.invoke(0L) }
+        assertEquals(listOf(session2), viewModel.uiState.value.sessions)
     }
 }

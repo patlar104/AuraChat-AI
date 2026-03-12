@@ -31,6 +31,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
@@ -39,6 +40,7 @@ import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.aurachat.R
 import com.aurachat.domain.model.ChatSession
+import com.aurachat.ui.TestTags
 
 /**
  * Navigation drawer content showing the full conversation history.
@@ -55,8 +57,24 @@ fun DrawerContent(
     viewModel: HistoryViewModel = hiltViewModel(),
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    DrawerContent(
+        uiState = uiState,
+        onNavigateToSession = onNavigateToSession,
+        onDeleteSession = viewModel::deleteSession,
+    )
+}
 
-    LazyColumn(modifier = Modifier.fillMaxHeight()) {
+@Composable
+fun DrawerContent(
+    uiState: HistoryUiState,
+    onNavigateToSession: (Long) -> Unit,
+    onDeleteSession: (Long) -> Unit,
+) {
+    LazyColumn(
+        modifier = Modifier
+            .fillMaxHeight()
+            .testTag(TestTags.History.LIST),
+    ) {
         item {
             Text(
                 text = stringResource(R.string.drawer_title),
@@ -73,7 +91,9 @@ fun DrawerContent(
                     text = stringResource(R.string.drawer_no_conversations),
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.padding(16.dp),
+                    modifier = Modifier
+                        .padding(16.dp)
+                        .testTag(TestTags.History.EMPTY_STATE),
                 )
             }
         }
@@ -81,7 +101,7 @@ fun DrawerContent(
         items(uiState.sessions, key = { it.id }) { session ->
             SwipeToDeleteSessionItem(
                 session = session,
-                onDelete = { viewModel.deleteSession(session.id) },
+                onDelete = { onDeleteSession(session.id) },
                 onClick = { onNavigateToSession(session.id) },
             )
         }
@@ -128,6 +148,7 @@ private fun SwipeToDeleteSessionItem(
                 modifier = Modifier
                     .fillMaxWidth()
                     .fillMaxHeight()
+                    .testTag(TestTags.History.DELETE_BACKGROUND_PREFIX + session.id)
                     .padding(horizontal = 8.dp, vertical = 4.dp)
                     .background(
                         color = backgroundColor,
@@ -162,6 +183,7 @@ private fun SessionListItem(
     Column(
         modifier = modifier
             .fillMaxWidth()
+            .testTag(TestTags.History.SESSION_ITEM_PREFIX + session.id)
             .background(MaterialTheme.colorScheme.surface)
             .clickable(onClick = onClick)
             .padding(horizontal = 16.dp, vertical = 14.dp),

@@ -44,6 +44,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
@@ -52,6 +53,7 @@ import coil.compose.AsyncImage
 import com.aurachat.R
 import com.aurachat.domain.model.ChatMessage
 import com.aurachat.domain.model.MessageRole
+import com.aurachat.ui.TestTags
 import com.aurachat.ui.components.MessageBubble
 
 @Composable
@@ -67,7 +69,7 @@ fun ChatScreen(
         uri?.let { viewModel.onImageSelected(it) }
     }
 
-    ChatContent(
+    ChatScreenContent(
         uiState = uiState,
         onInputChanged = viewModel::onInputChanged,
         onSendClicked = viewModel::onSendClicked,
@@ -82,7 +84,7 @@ fun ChatScreen(
 }
 
 @Composable
-private fun ChatContent(
+fun ChatScreenContent(
     uiState: ChatUiState,
     onInputChanged: (String) -> Unit,
     onSendClicked: () -> Unit,
@@ -204,6 +206,7 @@ private fun ImagePreviewStrip(
         modifier = Modifier
             .fillMaxWidth()
             .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.96f))
+            .testTag(TestTags.Chat.IMAGE_PREVIEW_STRIP)
             .padding(horizontal = 12.dp, vertical = 10.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
@@ -278,7 +281,9 @@ private fun ChatInputBar(
         IconButton(
             onClick = onAttachClicked,
             enabled = !isStreaming,
-            modifier = Modifier.size(48.dp),
+            modifier = Modifier
+                .size(48.dp)
+                .testTag(TestTags.Chat.ATTACH_BUTTON),
         ) {
             Icon(
                 imageVector = Icons.Default.AddPhotoAlternate,
@@ -295,6 +300,7 @@ private fun ChatInputBar(
             onValueChange = onTextChanged,
             modifier = Modifier
                 .weight(1f)
+                .testTag(TestTags.Chat.INPUT_FIELD)
                 .padding(horizontal = 4.dp),
             placeholder = {
                 Text(
@@ -327,7 +333,9 @@ private fun ChatInputBar(
             IconButton(
                 onClick = onSendClicked,
                 enabled = text.isNotBlank(),
-                modifier = Modifier.size(48.dp),
+                modifier = Modifier
+                    .size(48.dp)
+                    .testTag(TestTags.Chat.SEND_BUTTON),
             ) {
                 Icon(
                     imageVector = Icons.AutoMirrored.Filled.Send,
@@ -352,6 +360,7 @@ private fun ErrorRow(
     Row(
         modifier = Modifier
             .fillMaxWidth()
+            .testTag(TestTags.Chat.ERROR_ROW)
             .padding(horizontal = 16.dp, vertical = 4.dp),
         horizontalArrangement = Arrangement.spacedBy(8.dp),
         verticalAlignment = Alignment.CenterVertically,

@@ -41,6 +41,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
@@ -49,6 +50,7 @@ import coil.compose.AsyncImage
 import com.aurachat.R
 import com.aurachat.domain.model.ChatMessage
 import com.aurachat.domain.model.MessageRole
+import com.aurachat.ui.TestTags
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -248,7 +250,9 @@ private fun TypingIndicator() {
     Row(
         horizontalArrangement = Arrangement.spacedBy(4.dp),
         verticalAlignment = Alignment.CenterVertically,
-        modifier = Modifier.padding(vertical = 4.dp, horizontal = 2.dp),
+        modifier = Modifier
+            .padding(vertical = 4.dp, horizontal = 2.dp)
+            .testTag(TestTags.Chat.TYPING_INDICATOR),
     ) {
         repeat(3) { index ->
             val alpha by infiniteTransition.animateFloat(

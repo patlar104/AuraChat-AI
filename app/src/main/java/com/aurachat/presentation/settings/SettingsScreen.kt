@@ -22,6 +22,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
@@ -29,6 +30,7 @@ import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.aurachat.BuildConfig
 import com.aurachat.R
+import com.aurachat.ui.TestTags
 import com.aurachat.util.Constants
 
 @Composable
@@ -36,7 +38,21 @@ fun SettingsScreen(
     viewModel: SettingsViewModel = hiltViewModel(),
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    val uriHandler = LocalUriHandler.current
+    val githubUrl = stringResource(R.string.settings_github_url)
+    SettingsScreenContent(
+        uiState = uiState,
+        onSelectModel = viewModel::setSelectedModel,
+        onOpenGithub = { uriHandler.openUri(githubUrl) },
+    )
+}
 
+@Composable
+fun SettingsScreenContent(
+    uiState: SettingsUiState,
+    onSelectModel: (String) -> Unit,
+    onOpenGithub: () -> Unit,
+) {
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -63,7 +79,7 @@ fun SettingsScreen(
             ModelRadioRow(
                 modelName = model,
                 selected = uiState.selectedModel == model,
-                onClick = { viewModel.setSelectedModel(model) },
+                onClick = { onSelectModel(model) },
             )
         }
 
@@ -88,10 +104,9 @@ fun SettingsScreen(
             color = MaterialTheme.colorScheme.onBackground,
         )
 
-        val uriHandler = LocalUriHandler.current
-        val githubUrl = stringResource(R.string.settings_github_url)
         TextButton(
-            onClick = { uriHandler.openUri(githubUrl) },
+            onClick = onOpenGithub,
+            modifier = Modifier.testTag(TestTags.Settings.GITHUB_BUTTON),
         ) {
             Text(
                 text = stringResource(R.string.settings_github),
@@ -110,6 +125,7 @@ private fun ModelRadioRow(
     Row(
         modifier = Modifier
             .fillMaxWidth()
+            .testTag(TestTags.Settings.MODEL_ROW_PREFIX + modelName)
             .clickable(onClick = onClick)
             .padding(vertical = 2.dp),
         verticalAlignment = Alignment.CenterVertically,

@@ -33,6 +33,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -42,6 +43,7 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.aurachat.R
+import com.aurachat.ui.TestTags
 
 @Composable
 fun HomeScreen(
@@ -49,6 +51,27 @@ fun HomeScreen(
     viewModel: HomeViewModel = hiltViewModel(),
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    HomeScreenContent(
+        uiState = uiState,
+        onInputChanged = viewModel::onInputChanged,
+        onSend = viewModel::onSend,
+        onSuggestionTapped = viewModel::onSuggestionTapped,
+        onNavigationConsumed = viewModel::onNavigationConsumed,
+        onErrorDismissed = viewModel::onErrorDismissed,
+        onNavigateToChat = onNavigateToChat,
+    )
+}
+
+@Composable
+fun HomeScreenContent(
+    uiState: HomeUiState,
+    onInputChanged: (String) -> Unit,
+    onSend: () -> Unit,
+    onSuggestionTapped: (String) -> Unit,
+    onNavigationConsumed: () -> Unit,
+    onErrorDismissed: () -> Unit,
+    onNavigateToChat: (Long) -> Unit,
+) {
     val snackbarHostState = remember { SnackbarHostState() }
 
     // One-shot navigation: fires when navigateToSessionId becomes non-null
@@ -56,7 +79,7 @@ fun HomeScreen(
         val sessionId = uiState.navigateToSessionId
         if (sessionId != null) {
             onNavigateToChat(sessionId)
-            viewModel.onNavigationConsumed()
+            onNavigationConsumed()
         }
     }
 
@@ -65,7 +88,7 @@ fun HomeScreen(
         val errorMessage = uiState.errorMessage
         if (errorMessage != null) {
             snackbarHostState.showSnackbar(errorMessage)
-            viewModel.onErrorDismissed()
+            onErrorDismissed()
         }
     }
 
@@ -100,7 +123,7 @@ fun HomeScreen(
             items(suggestionChips) { suggestionResId ->
                 val suggestion = stringResource(suggestionResId)
                 SuggestionChip(
-                    onClick = { viewModel.onSuggestionTapped(suggestion) },
+                    onClick = { onSuggestionTapped(suggestion) },
                     label = {
                         Text(
                             text = suggestion,
@@ -120,8 +143,8 @@ fun HomeScreen(
 
         HomeInputBar(
             text = uiState.inputText,
-            onTextChanged = viewModel::onInputChanged,
-            onSend = viewModel::onSend,
+            onTextChanged = onInputChanged,
+            onSend = onSend,
             isSending = uiState.isCreatingSession,
         )
 
@@ -165,7 +188,9 @@ private fun HomeInputBar(
             TextField(
                 value = text,
                 onValueChange = onTextChanged,
-                modifier = Modifier.weight(1f),
+                modifier = Modifier
+                    .weight(1f)
+                    .testTag(TestTags.Home.INPUT_FIELD),
                 placeholder = {
                     Text(
                         text = stringResource(R.string.home_input_placeholder),
@@ -191,6 +216,7 @@ private fun HomeInputBar(
             IconButton(
                 onClick = onSend,
                 enabled = text.isNotBlank() && !isSending,
+                modifier = Modifier.testTag(TestTags.Home.SEND_BUTTON),
             ) {
                 Icon(
                     imageVector = Icons.AutoMirrored.Filled.Send,

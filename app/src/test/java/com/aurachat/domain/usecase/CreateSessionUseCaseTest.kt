@@ -1,90 +1,72 @@
 package com.aurachat.domain.usecase
 
+import com.aurachat.domain.error.DomainError
 import com.aurachat.domain.repository.ChatRepository
+import com.aurachat.testutil.assertThrowsSuspend
 import io.mockk.coEvery
 import io.mockk.coVerify
 import io.mockk.mockk
-import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.runTest
-import org.junit.Assert.assertEquals
-import org.junit.Before
-import org.junit.Test
+import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.BeforeEach
+import org.junit.jupiter.api.Test
+import org.junit.jupiter.params.ParameterizedTest
+import org.junit.jupiter.params.provider.Arguments
+import org.junit.jupiter.params.provider.MethodSource
+import java.util.stream.Stream
 
-@OptIn(ExperimentalCoroutinesApi::class)
 class CreateSessionUseCaseTest {
 
     private lateinit var repository: ChatRepository
     private lateinit var useCase: CreateSessionUseCase
 
-    @Before
-    fun setup() {
-        repository = mockk(relaxed = true)
+    @BeforeEach
+    fun setUp() {
+        repository = mockk()
         useCase = CreateSessionUseCase(repository)
     }
 
-    @Test
-    fun `invoke creates session with default title and returns generated ID`() = runTest {
-        // Given: Repository returns generated ID
-        val expectedId = 123L
-        coEvery { repository.createSession(any(), any()) } returns expectedId
+    @ParameterizedTest(name = "{index}: title=''{0}''")
+    @MethodSource("validTitles")
+    fun `invoke creates session with provided title`(
+        title: String,
+        expectedId: Long,
+    ) = runTest {
+        coEvery { repository.createSession(title, null) } returns expectedId
 
-        // When: Invoke use case without title
-        val result = useCase()
+        assertEquals(expectedId, useCase(title))
 
-        // Then: Should create session with default title and return ID
-        assertEquals(expectedId, result)
-        coVerify { repository.createSession("New Chat", null) }
+        coVerify(exactly = 1) { repository.createSession(title, null) }
     }
 
     @Test
-    fun `invoke creates session with custom title and returns generated ID`() = runTest {
-        // Given: Repository returns generated ID
-        val expectedId = 456L
-        val customTitle = "Custom Chat Title"
-        coEvery { repository.createSession(customTitle, null) } returns expectedId
+    fun `invoke uses default title when no title is provided`() = runTest {
+        coEvery { repository.createSession("New Chat", null) } returns 123L
 
-        // When: Invoke use case with custom title
-        val result = useCase(customTitle)
+        assertEquals(123L, useCase())
 
-        // Then: Should create session with custom title and return ID
-        assertEquals(expectedId, result)
-        coVerify { repository.createSession(customTitle, null) }
-    }
-
-    @Test(expected = com.aurachat.domain.error.DomainError.ValidationError::class)
-    fun `invoke throws ValidationError for empty title`() = runTest {
-        // Given: Empty title
-        val emptyTitle = ""
-
-        // When: Invoke use case with empty title
-        // Then: Should throw ValidationError
-        useCase(emptyTitle)
+        coVerify(exactly = 1) { repository.createSession("New Chat", null) }
     }
 
     @Test
-    fun `invoke creates session with long title`() = runTest {
-        // Given: Repository returns generated ID
-        val expectedId = 999L
-        val longTitle = "This is a very long chat title that exceeds typical length expectations"
-        coEvery { repository.createSession(longTitle, null) } returns expectedId
-
-        // When: Invoke use case with long title
-        val result = useCase(longTitle)
-
-        // Then: Should create session with long title and return ID
-        assertEquals(expectedId, result)
-        coVerify { repository.createSession(longTitle, null) }
+    fun `invoke throws validation error for blank title`() = runTest {
+        assertThrowsSuspend<DomainError.ValidationError> { useCase("   ") }
     }
 
     @Test
-    fun `invoke delegates to repository exactly once`() = runTest {
-        // Given: Repository returns generated ID
-        coEvery { repository.createSession(any(), any()) } returns 1L
+    fun `invoke wraps unexpected repository errors`() = runTest {
+        coEvery { repository.createSession(any(), any()) } throws IllegalStateException("boom")
 
-        // When: Invoke use case
-        useCase("Test Title")
+        val error = assertThrowsSuspend<DomainError.DatabaseError> { useCase("Test Title") }
 
-        // Then: Should call repository exactly once
-        coVerify(exactly = 1) { repository.createSession(any(), any()) }
+        assertEquals("Failed to create session: boom", error.message)
+    }
+
+    private companion object {
+        @JvmStatic
+        fun validTitles(): Stream<Arguments> = Stream.of(
+            Arguments.of("Custom Chat Title", 456L),
+            Arguments.of("This is a very long chat title that exceeds typical length expectations", 999L),
+        )
     }
 }

@@ -2,24 +2,23 @@ package com.aurachat.domain.usecase
 
 import com.aurachat.domain.error.DomainError
 import com.aurachat.domain.repository.ChatRepository
+import com.aurachat.testutil.assertThrowsSuspend
 import com.aurachat.util.Constants
 import io.mockk.coEvery
 import io.mockk.coVerify
 import io.mockk.mockk
-import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.runTest
-import org.junit.Assert.assertEquals
-import org.junit.Before
-import org.junit.Test
+import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.BeforeEach
+import org.junit.jupiter.api.Test
 
-@OptIn(ExperimentalCoroutinesApi::class)
 class StartChatSessionUseCaseTest {
 
     private lateinit var repository: ChatRepository
     private lateinit var useCase: StartChatSessionUseCase
 
-    @Before
-    fun setup() {
+    @BeforeEach
+    fun setUp() {
         repository = mockk(relaxed = true)
         useCase = StartChatSessionUseCase(repository)
     }
@@ -28,10 +27,9 @@ class StartChatSessionUseCaseTest {
     fun `invoke creates session with prompt-derived title and pending prompt`() = runTest {
         coEvery { repository.createSession(any(), any()) } returns 123L
 
-        val result = useCase("Hello Aura")
+        assertEquals(123L, useCase("Hello Aura"))
 
-        assertEquals(123L, result)
-        coVerify {
+        coVerify(exactly = 1) {
             repository.createSession(
                 title = "Hello Aura",
                 pendingInitialPrompt = "Hello Aura",
@@ -45,7 +43,7 @@ class StartChatSessionUseCaseTest {
 
         useCase("  Hello Aura  ")
 
-        coVerify {
+        coVerify(exactly = 1) {
             repository.createSession(
                 title = "Hello Aura",
                 pendingInitialPrompt = "Hello Aura",
@@ -60,7 +58,7 @@ class StartChatSessionUseCaseTest {
 
         useCase(longPrompt)
 
-        coVerify {
+        coVerify(exactly = 1) {
             repository.createSession(
                 title = longPrompt.take(Constants.Session.MAX_TITLE_LENGTH),
                 pendingInitialPrompt = longPrompt,
@@ -68,8 +66,8 @@ class StartChatSessionUseCaseTest {
         }
     }
 
-    @Test(expected = DomainError.ValidationError::class)
+    @Test
     fun `invoke throws validation error for blank prompt`() = runTest {
-        useCase("   ")
+        assertThrowsSuspend<DomainError.ValidationError> { useCase("   ") }
     }
 }

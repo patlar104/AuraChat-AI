@@ -3,6 +3,7 @@ import java.util.Properties
 
 plugins {
 	alias(libs.plugins.android.application)
+	alias(libs.plugins.android.junit5)
 	alias(libs.plugins.kotlin.compose)
 	alias(libs.plugins.kotlin.serialization)
 	alias(libs.plugins.hilt)
@@ -60,6 +61,12 @@ android {
 	buildFeatures {
 		compose = true
 		buildConfig = true
+	}
+
+	testOptions {
+		unitTests.all {
+			it.useJUnitPlatform()
+		}
 	}
 }
 
@@ -123,12 +130,20 @@ dependencies {
 	implementation(libs.firebase.ai)
 
 	// Testing
+	testImplementation(platform(libs.junit.bom))
 	testImplementation(libs.junit)
+	testImplementation(libs.junit.jupiter)
+	testImplementation(libs.junit.jupiter.params)
+	testRuntimeOnly(libs.junit.platform.launcher)
+	testRuntimeOnly(libs.junit.vintage.engine)
 	testImplementation(libs.mockk)
 	testImplementation(libs.turbine)
 	testImplementation(libs.kotlinx.coroutines.test)
 	androidTestImplementation(libs.androidx.junit)
 	androidTestImplementation(libs.androidx.espresso.core)
+	androidTestImplementation(libs.androidx.room.testing)
+	androidTestImplementation(libs.turbine)
+	androidTestImplementation(libs.kotlinx.coroutines.test)
 	androidTestImplementation(platform(libs.androidx.compose.bom))
 	androidTestImplementation(libs.androidx.compose.ui.test.junit4)
 	debugImplementation(libs.androidx.compose.ui.tooling)
