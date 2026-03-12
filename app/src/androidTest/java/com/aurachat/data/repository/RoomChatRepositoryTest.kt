@@ -111,13 +111,14 @@ class RoomChatRepositoryTest {
         repository.getSessionsFlow().test {
             val initialOrder = awaitItem()
             assertEquals(listOf(secondSessionId, firstSessionId), initialOrder.map { it.id })
+            val newestTimestamp = initialOrder.maxOf { it.updatedAt } + 1_000L
 
             repository.saveMessage(
                 ChatMessage(
                     sessionId = firstSessionId,
                     content = "Newest message",
                     role = MessageRole.USER,
-                    timestamp = 9_999L,
+                    timestamp = newestTimestamp,
                 ),
             )
 
