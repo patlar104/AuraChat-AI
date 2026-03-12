@@ -2,7 +2,7 @@ package com.aurachat.presentation.home
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.aurachat.domain.usecase.CreateSessionUseCase
+import com.aurachat.domain.usecase.StartChatSessionUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -21,7 +21,7 @@ import javax.inject.Inject
  */
 @HiltViewModel
 class HomeViewModel @Inject constructor(
-    private val createSession: CreateSessionUseCase,
+    private val startChatSession: StartChatSessionUseCase,
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(HomeUiState())
@@ -82,7 +82,7 @@ class HomeViewModel @Inject constructor(
      */
     fun onNavigationConsumed() {
         Timber.d("Navigation event consumed")
-        _uiState.update { it.copy(navigateToSessionId = null, navigateToInitialPrompt = null) }
+        _uiState.update { it.copy(navigateToSessionId = null) }
     }
 
     /**
@@ -101,13 +101,12 @@ class HomeViewModel @Inject constructor(
             Timber.d("Creating session with title: ${title.take(30)}...")
             _uiState.update { it.copy(isCreatingSession = true) }
             try {
-                val sessionId = createSession(initialTitle = title.take(60))
+                val sessionId = startChatSession(title)
                 Timber.d("Session created successfully with id=$sessionId")
                 _uiState.update {
                     it.copy(
                         isCreatingSession = false,
                         navigateToSessionId = sessionId,
-                        navigateToInitialPrompt = title,
                         inputText = "",
                     )
                 }

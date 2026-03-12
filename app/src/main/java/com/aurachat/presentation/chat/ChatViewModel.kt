@@ -8,6 +8,7 @@ import android.os.Build
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.aurachat.domain.usecase.ConsumePendingInitialPromptUseCase
 import com.aurachat.domain.usecase.GetMessagesUseCase
 import com.aurachat.domain.usecase.SendMessageUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -30,6 +31,7 @@ import javax.inject.Inject
 class ChatViewModel @Inject constructor(
     savedStateHandle: SavedStateHandle,
     @param:ApplicationContext private val context: Context,
+    private val consumePendingInitialPromptUseCase: ConsumePendingInitialPromptUseCase,
     private val getMessages: GetMessagesUseCase,
     private val sendMessage: SendMessageUseCase,
 ) : ViewModel() {
@@ -43,7 +45,7 @@ class ChatViewModel @Inject constructor(
 
     init {
         observeMessages()
-        consumeInitialPrompt(savedStateHandle)
+        consumePendingInitialPrompt()
     }
 
     // ── Message observation ───────────────────────────────────────────────────
@@ -65,11 +67,13 @@ class ChatViewModel @Inject constructor(
             .launchIn(viewModelScope)
     }
 
-    private fun consumeInitialPrompt(savedStateHandle: SavedStateHandle) {
-        val initialPrompt = savedStateHandle.remove<String>("initialPrompt")?.trim()
-        if (!initialPrompt.isNullOrBlank()) {
-            Timber.d("Consuming initial prompt for sessionId=%d", sessionId)
-            startSend(initialPrompt, imageUri = null)
+    private fun consumePendingInitialPrompt() {
+        viewModelScope.launch {
+            val prompt = consumePendingInitialPromptUseCase(sessionId)?.trim()
+            if (!prompt.isNullOrBlank()) {
+                Timber.d("Starting pending initial prompt for sessionId=%d", sessionId)
+                startSend(prompt, imageUri = null)
+            }
         }
     }
 

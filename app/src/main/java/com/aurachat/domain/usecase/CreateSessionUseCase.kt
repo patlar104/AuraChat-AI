@@ -31,7 +31,7 @@ class CreateSessionUseCase @Inject constructor(
         }
 
         return try {
-            val sessionId = repository.createSession(initialTitle)
+            val sessionId = repository.createSession(initialTitle, pendingInitialPrompt = null)
             Timber.i("Session created with id=$sessionId")
             sessionId
         } catch (e: DomainError) {

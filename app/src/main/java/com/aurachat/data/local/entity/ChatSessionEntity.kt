@@ -34,6 +34,9 @@ data class ChatSessionEntity(
 
     @ColumnInfo(name = "last_message_preview")
     val lastMessagePreview: String = "",
+
+    @ColumnInfo(name = "pending_initial_prompt")
+    val pendingInitialPrompt: String? = null,
 )
 
 /** Maps this entity to the domain [ChatSession] model. */
@@ -44,6 +47,7 @@ fun ChatSessionEntity.toDomain() = ChatSession(
     updatedAt = updatedAt,
     messageCount = messageCount,
     lastMessagePreview = lastMessagePreview,
+    pendingInitialPrompt = pendingInitialPrompt,
 )
 
 /** Maps the domain [ChatSession] to its Room entity representation. */
@@ -54,4 +58,5 @@ fun ChatSession.toEntity() = ChatSessionEntity(
     updatedAt = updatedAt,
     messageCount = messageCount,
     lastMessagePreview = lastMessagePreview,
+    pendingInitialPrompt = pendingInitialPrompt,
 )

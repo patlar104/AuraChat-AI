@@ -30,13 +30,19 @@ interface ChatRepository {
      * Creates a new session with the given [title] and returns its generated ID
      * for immediate navigation to the chat screen.
      */
-    suspend fun createSession(title: String): Long
+    suspend fun createSession(title: String, pendingInitialPrompt: String? = null): Long
 
     /**
      * Permanently deletes the session with [sessionId] and all its associated messages
      * (via Room's ForeignKey CASCADE constraint).
      */
     suspend fun deleteSession(sessionId: Long)
+
+    /**
+     * Returns the durable startup prompt for [sessionId] and clears it in the same
+     * transaction so it can only be auto-sent once.
+     */
+    suspend fun consumePendingInitialPrompt(sessionId: Long): String?
 
     // ── Messages ──────────────────────────────────────────────────────────────
 

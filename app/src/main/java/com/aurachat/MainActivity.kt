@@ -1,6 +1,5 @@
 package com.aurachat
 
-import android.net.Uri
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -28,11 +27,12 @@ import androidx.compose.material3.rememberDrawerState
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
-import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
-import androidx.navigation.navArgument
+import com.aurachat.navigation.ChatRoute
+import com.aurachat.navigation.HomeRoute
+import com.aurachat.navigation.SettingsRoute
 import com.aurachat.presentation.chat.ChatScreen
 import com.aurachat.presentation.history.DrawerContent
 import com.aurachat.presentation.home.HomeScreen
@@ -40,29 +40,6 @@ import com.aurachat.presentation.settings.SettingsScreen
 import com.aurachat.ui.theme.AuraChatTheme
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.launch
-
-/**
- * Navigation route constants for the AuraChat app.
- *
- * All route strings are defined here to keep navigation configuration in one place
- * and to avoid typo-prone string literals scattered across the NavHost.
- */
-object NavRoutes {
-    /** Route for the home/start screen. */
-    const val HOME = "home"
-    /** Route template for a chat session screen; accepts an optional initial prompt. */
-    const val CHAT = "chat/{sessionId}?initialPrompt={initialPrompt}"
-    /** Route for the settings screen. */
-    const val SETTINGS = "settings"
-
-    /** Builds a fully-resolved chat route for [sessionId]. */
-    fun chat(sessionId: Long, initialPrompt: String? = null): String =
-        if (initialPrompt.isNullOrBlank()) {
-            "chat/$sessionId"
-        } else {
-            "chat/$sessionId?initialPrompt=${Uri.encode(initialPrompt)}"
-        }
-}
 
 /**
  * The app's single activity.
@@ -93,7 +70,7 @@ class MainActivity : ComponentActivity() {
                                 onNavigateToSession = { sessionId ->
                                     scope.launch {
                                         drawerState.close()
-                                        navController.navigate(NavRoutes.chat(sessionId))
+                                        navController.navigate(ChatRoute(sessionId))
                                     }
                                 },
                             )
@@ -121,7 +98,7 @@ class MainActivity : ComponentActivity() {
                                 },
                                 actions = {
                                     IconButton(onClick = {
-                                        navController.navigate(NavRoutes.SETTINGS)
+                                        navController.navigate(SettingsRoute)
                                     }) {
                                         Icon(
                                             imageVector = Icons.Default.Settings,
@@ -141,7 +118,7 @@ class MainActivity : ComponentActivity() {
                     ) { innerPadding ->
                         NavHost(
                             navController = navController,
-                            startDestination = NavRoutes.HOME,
+                            startDestination = HomeRoute,
                             modifier = Modifier.padding(innerPadding),
                             enterTransition = {
                                 slideInHorizontally(initialOffsetX = { it }) + fadeIn()
@@ -156,29 +133,19 @@ class MainActivity : ComponentActivity() {
                                 slideOutHorizontally(targetOffsetX = { it }) + fadeOut()
                             },
                         ) {
-                            composable(NavRoutes.HOME) {
+                            composable<HomeRoute> {
                                 HomeScreen(
-                                    onNavigateToChat = { sessionId, initialPrompt ->
-                                        navController.navigate(NavRoutes.chat(sessionId, initialPrompt))
+                                    onNavigateToChat = { sessionId ->
+                                        navController.navigate(ChatRoute(sessionId))
                                     },
                                 )
                             }
-                            composable(
-                                route = NavRoutes.CHAT,
-                                arguments = listOf(
-                                    navArgument("sessionId") { type = NavType.LongType },
-                                    navArgument("initialPrompt") {
-                                        type = NavType.StringType
-                                        nullable = true
-                                        defaultValue = null
-                                    },
-                                ),
-                            ) {
+                            composable<ChatRoute> {
                                 // sessionId is automatically injected into ChatViewModel
                                 // via SavedStateHandle by Hilt + Navigation Compose
                                 ChatScreen()
                             }
-                            composable(NavRoutes.SETTINGS) {
+                            composable<SettingsRoute> {
                                 SettingsScreen()
                             }
                         }

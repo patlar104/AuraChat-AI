@@ -15,6 +15,8 @@ package com.aurachat.domain.model
  * @property messageCount Denormalized count of messages for display without a JOIN.
  * @property lastMessagePreview Truncated text of the most recent message, shown as a
  *   subtitle in the history list.
+ * @property pendingInitialPrompt Durable startup prompt for a newly-created session.
+ *   Claimed once by the chat screen and then cleared from persistence.
  */
 data class ChatSession(
     val id: Long = 0L,
@@ -23,4 +25,5 @@ data class ChatSession(
     val updatedAt: Long,
     val messageCount: Int = 0,
     val lastMessagePreview: String = "",
+    val pendingInitialPrompt: String? = null,
 )

@@ -26,14 +26,14 @@ class CreateSessionUseCaseTest {
     fun `invoke creates session with default title and returns generated ID`() = runTest {
         // Given: Repository returns generated ID
         val expectedId = 123L
-        coEvery { repository.createSession(any()) } returns expectedId
+        coEvery { repository.createSession(any(), any()) } returns expectedId
 
         // When: Invoke use case without title
         val result = useCase()
 
         // Then: Should create session with default title and return ID
         assertEquals(expectedId, result)
-        coVerify { repository.createSession("New Chat") }
+        coVerify { repository.createSession("New Chat", null) }
     }
 
     @Test
@@ -41,14 +41,14 @@ class CreateSessionUseCaseTest {
         // Given: Repository returns generated ID
         val expectedId = 456L
         val customTitle = "Custom Chat Title"
-        coEvery { repository.createSession(customTitle) } returns expectedId
+        coEvery { repository.createSession(customTitle, null) } returns expectedId
 
         // When: Invoke use case with custom title
         val result = useCase(customTitle)
 
         // Then: Should create session with custom title and return ID
         assertEquals(expectedId, result)
-        coVerify { repository.createSession(customTitle) }
+        coVerify { repository.createSession(customTitle, null) }
     }
 
     @Test(expected = com.aurachat.domain.error.DomainError.ValidationError::class)
@@ -66,25 +66,25 @@ class CreateSessionUseCaseTest {
         // Given: Repository returns generated ID
         val expectedId = 999L
         val longTitle = "This is a very long chat title that exceeds typical length expectations"
-        coEvery { repository.createSession(longTitle) } returns expectedId
+        coEvery { repository.createSession(longTitle, null) } returns expectedId
 
         // When: Invoke use case with long title
         val result = useCase(longTitle)
 
         // Then: Should create session with long title and return ID
         assertEquals(expectedId, result)
-        coVerify { repository.createSession(longTitle) }
+        coVerify { repository.createSession(longTitle, null) }
     }
 
     @Test
     fun `invoke delegates to repository exactly once`() = runTest {
         // Given: Repository returns generated ID
-        coEvery { repository.createSession(any()) } returns 1L
+        coEvery { repository.createSession(any(), any()) } returns 1L
 
         // When: Invoke use case
         useCase("Test Title")
 
         // Then: Should call repository exactly once
-        coVerify(exactly = 1) { repository.createSession(any()) }
+        coVerify(exactly = 1) { repository.createSession(any(), any()) }
     }
 }

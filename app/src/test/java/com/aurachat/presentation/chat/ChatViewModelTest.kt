@@ -5,6 +5,7 @@ import androidx.lifecycle.SavedStateHandle
 import app.cash.turbine.test
 import com.aurachat.domain.model.ChatMessage
 import com.aurachat.domain.model.MessageRole
+import com.aurachat.domain.usecase.ConsumePendingInitialPromptUseCase
 import com.aurachat.domain.usecase.GetMessagesUseCase
 import com.aurachat.domain.usecase.SendMessageUseCase
 import io.mockk.coEvery
@@ -37,6 +38,7 @@ class ChatViewModelTest {
     private val testDispatcher = StandardTestDispatcher()
     private val context: Context = mockk(relaxed = true)
     private lateinit var savedStateHandle: SavedStateHandle
+    private lateinit var consumePendingInitialPromptUseCase: ConsumePendingInitialPromptUseCase
     private lateinit var getMessagesUseCase: GetMessagesUseCase
     private lateinit var sendMessageUseCase: SendMessageUseCase
     private lateinit var viewModel: ChatViewModel
@@ -63,9 +65,11 @@ class ChatViewModelTest {
     fun setup() {
         Dispatchers.setMain(testDispatcher)
         savedStateHandle = SavedStateHandle(mapOf("sessionId" to testSessionId))
+        consumePendingInitialPromptUseCase = mockk()
         getMessagesUseCase = mockk()
         sendMessageUseCase = mockk()
 
+        coEvery { consumePendingInitialPromptUseCase(testSessionId) } returns null
         // Default: emit empty list initially
         every { getMessagesUseCase(testSessionId) } returns flowOf(emptyList())
     }
@@ -76,7 +80,13 @@ class ChatViewModelTest {
     }
 
     private fun createViewModel(): ChatViewModel {
-        return ChatViewModel(savedStateHandle, context, getMessagesUseCase, sendMessageUseCase)
+        return ChatViewModel(
+            savedStateHandle,
+            context,
+            consumePendingInitialPromptUseCase,
+            getMessagesUseCase,
+            sendMessageUseCase,
+        )
     }
 
     @Test
@@ -717,13 +727,8 @@ class ChatViewModelTest {
     }
 
     @Test
-    fun `initialPrompt auto-sends when provided in SavedStateHandle`() = runTest {
-        savedStateHandle = SavedStateHandle(
-            mapOf(
-                "sessionId" to testSessionId,
-                "initialPrompt" to "Hello from home",
-            )
-        )
+    fun `pending initial prompt auto-sends when available`() = runTest {
+        coEvery { consumePendingInitialPromptUseCase(testSessionId) } returns "Hello from home"
         coEvery { sendMessageUseCase(testSessionId, "Hello from home", null) } returns flowOf("Hi there!")
 
         viewModel = createViewModel()
@@ -734,9 +739,49 @@ class ChatViewModelTest {
             assertFalse(state.isStreaming)
             assertNull(state.streamingText)
             assertEquals("", state.inputText)
-            assertNull(savedStateHandle.get<String>("initialPrompt"))
         }
 
+        coVerify(exactly = 1) { consumePendingInitialPromptUseCase(testSessionId) }
         coVerify(exactly = 1) { sendMessageUseCase(testSessionId, "Hello from home", null) }
+    }
+
+    @Test
+    fun `missing pending initial prompt is a no-op`() = runTest {
+        coEvery { consumePendingInitialPromptUseCase(testSessionId) } returns null
+
+        viewModel = createViewModel()
+        advanceUntilIdle()
+
+        coVerify(exactly = 1) { consumePendingInitialPromptUseCase(testSessionId) }
+        coVerify(exactly = 0) { sendMessageUseCase(any(), any(), any()) }
+    }
+
+    @Test
+    fun `blank pending initial prompt is a no-op`() = runTest {
+        coEvery { consumePendingInitialPromptUseCase(testSessionId) } returns "   "
+
+        viewModel = createViewModel()
+        advanceUntilIdle()
+
+        coVerify(exactly = 1) { consumePendingInitialPromptUseCase(testSessionId) }
+        coVerify(exactly = 0) { sendMessageUseCase(any(), any(), any()) }
+    }
+
+    @Test
+    fun `failed pending initial prompt send restores input for retry`() = runTest {
+        coEvery { consumePendingInitialPromptUseCase(testSessionId) } returns "Hello from home"
+        coEvery { sendMessageUseCase(testSessionId, "Hello from home", null) } throws RuntimeException("Network error")
+
+        viewModel = createViewModel()
+        advanceUntilIdle()
+
+        viewModel.uiState.test {
+            val state = awaitItem()
+            assertFalse(state.isStreaming)
+            assertNull(state.streamingText)
+            assertEquals("Hello from home", state.inputText)
+            assertEquals("Network error", state.errorMessage)
+            assertEquals("Hello from home", state.lastFailedPrompt)
+        }
     }
 }

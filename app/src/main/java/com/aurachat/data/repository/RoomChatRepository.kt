@@ -2,6 +2,7 @@ package com.aurachat.data.repository
 
 import com.aurachat.data.local.dao.ChatMessageDao
 import com.aurachat.data.local.dao.ChatSessionDao
+import com.aurachat.data.local.database.AuraChatDatabase
 import com.aurachat.data.local.entity.ChatSessionEntity
 import com.aurachat.data.local.entity.toDomain
 import com.aurachat.data.local.entity.toEntity
@@ -9,6 +10,7 @@ import com.aurachat.domain.model.ChatMessage
 import com.aurachat.domain.model.ChatSession
 import com.aurachat.domain.repository.ChatRepository
 import com.aurachat.util.Constants
+import androidx.room.withTransaction
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 import timber.log.Timber
@@ -24,6 +26,7 @@ import javax.inject.Singleton
  */
 @Singleton
 class RoomChatRepository @Inject constructor(
+    private val database: AuraChatDatabase,
     private val sessionDao: ChatSessionDao,
     private val messageDao: ChatMessageDao,
 ) : ChatRepository {
@@ -34,10 +37,15 @@ class RoomChatRepository @Inject constructor(
     override suspend fun getSessionById(sessionId: Long): ChatSession? =
         sessionDao.getSessionById(sessionId)?.toDomain()
 
-    override suspend fun createSession(title: String): Long {
+    override suspend fun createSession(title: String, pendingInitialPrompt: String?): Long {
         val now = System.currentTimeMillis()
         val id = sessionDao.insertSession(
-            ChatSessionEntity(title = title, createdAt = now, updatedAt = now),
+            ChatSessionEntity(
+                title = title,
+                createdAt = now,
+                updatedAt = now,
+                pendingInitialPrompt = pendingInitialPrompt,
+            ),
         )
         Timber.d("Created session id=%d title=%s", id, title)
         return id
@@ -47,6 +55,15 @@ class RoomChatRepository @Inject constructor(
         sessionDao.deleteSessionById(sessionId)
         Timber.d("Deleted session id=%d (messages cascade-deleted by Room)", sessionId)
     }
+
+    override suspend fun consumePendingInitialPrompt(sessionId: Long): String? =
+        database.withTransaction {
+            val session = sessionDao.getSessionById(sessionId) ?: return@withTransaction null
+            val prompt = session.pendingInitialPrompt?.takeIf { it.isNotBlank() } ?: return@withTransaction null
+            sessionDao.updateSession(session.copy(pendingInitialPrompt = null))
+            Timber.d("Consumed pending initial prompt for session id=%d", sessionId)
+            prompt
+        }
 
     override fun getMessagesFlow(sessionId: Long): Flow<List<ChatMessage>> =
         messageDao.getMessagesForSessionFlow(sessionId).map { entities -> entities.map { it.toDomain() } }
