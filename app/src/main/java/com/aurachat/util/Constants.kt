@@ -32,6 +32,13 @@ object Constants {
      */
     object Gemini {
         /**
+         * Images larger than this edge are downscaled before being sent to Gemini.
+         * This keeps token usage and internal tiling lower while preserving enough
+         * detail for common "what is this?" and counting-style prompts.
+         */
+        const val MAX_VISION_IMAGE_EDGE_PX = 1024
+
+        /**
          * Default Gemini model used when no user preference is stored.
          * gemini-2.0-flash retires June 1 2026; using 2.5-flash (stable, no -preview suffix).
          */

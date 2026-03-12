@@ -55,6 +55,15 @@ object ImageAttachmentStore {
         }
     }
 
+    suspend fun decodeVisionBitmap(
+        context: Context,
+        storedImageUri: String,
+        maxEdgePx: Int = Constants.Gemini.MAX_VISION_IMAGE_EDGE_PX,
+    ): Bitmap? = withContext(Dispatchers.IO) {
+        val decoded = decodeBitmap(context, storedImageUri) ?: return@withContext null
+        downscaleIfNeeded(decoded, maxEdgePx)
+    }
+
     private fun resolveExtension(context: Context, sourceUri: Uri): String {
         val mimeType = context.contentResolver.getType(sourceUri)
         val mappedExtension = mimeType?.let(MimeTypeMap.getSingleton()::getExtensionFromMimeType)
@@ -63,5 +72,18 @@ object ImageAttachmentStore {
         val lastSegment = sourceUri.lastPathSegment.orEmpty()
         val inferredExtension = lastSegment.substringAfterLast('.', missingDelimiterValue = "")
         return inferredExtension.takeIf { it.isNotBlank() } ?: "jpg"
+    }
+
+    private fun downscaleIfNeeded(
+        bitmap: Bitmap,
+        maxEdgePx: Int,
+    ): Bitmap {
+        val longestEdge = maxOf(bitmap.width, bitmap.height)
+        if (longestEdge <= maxEdgePx) return bitmap
+
+        val scale = maxEdgePx.toFloat() / longestEdge.toFloat()
+        val scaledWidth = (bitmap.width * scale).toInt().coerceAtLeast(1)
+        val scaledHeight = (bitmap.height * scale).toInt().coerceAtLeast(1)
+        return Bitmap.createScaledBitmap(bitmap, scaledWidth, scaledHeight, true)
     }
 }

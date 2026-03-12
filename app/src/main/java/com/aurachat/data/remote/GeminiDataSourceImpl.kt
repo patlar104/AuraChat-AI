@@ -38,6 +38,17 @@ class GeminiDataSourceImpl @Inject constructor(
     private val settingsRepository: SettingsRepository,
 ) : GeminiDataSource {
 
+    private val systemInstruction = content(role = "system") {
+        text(
+            """
+            You are AuraChat, a helpful visual assistant.
+            Each user message contains at most one attached image unless the user explicitly sends multiple attachments.
+            Gemini may internally inspect crops or tiles of a single image. Never describe those internal crops, tiles, or analysis windows as separate photos.
+            If the user asks how many photos were sent, answer using the number of attached user images only.
+            """.trimIndent()
+        )
+    }
+
     override fun sendMessage(
         history: List<ChatMessage>,
         userPrompt: String,
@@ -84,6 +95,7 @@ class GeminiDataSourceImpl @Inject constructor(
                     topP = Constants.Gemini.TOP_P
                     maxOutputTokens = Constants.Gemini.MAX_OUTPUT_TOKENS
                 },
+                systemInstruction = systemInstruction,
             )
 
     /**

@@ -166,7 +166,7 @@ class ChatViewModel @Inject constructor(
 
     private suspend fun prepareAttachment(sourceUri: Uri): PreparedAttachment {
         val storedImageUri = ImageAttachmentStore.importSelectedImage(context, sourceUri)
-        val bitmap = ImageAttachmentStore.decodeBitmap(context, storedImageUri)
+        val bitmap = ImageAttachmentStore.decodeVisionBitmap(context, storedImageUri)
             ?: error("Couldn't prepare that image. Try a different photo.")
         return PreparedAttachment(
             storedImageUri = storedImageUri,
