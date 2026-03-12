@@ -8,10 +8,12 @@ import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.border
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -22,11 +24,18 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Close
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -34,6 +43,8 @@ import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.window.Dialog
+import androidx.compose.ui.window.DialogProperties
 import coil.compose.AsyncImage
 import com.aurachat.R
 import com.aurachat.domain.model.ChatMessage
@@ -139,11 +150,14 @@ fun MessageBubble(message: ChatMessage) {
 
 @Composable
 private fun MessageAttachment(imageUri: String) {
+    var isExpanded by rememberSaveable(imageUri) { mutableStateOf(false) }
+
     Surface(
         shape = RoundedCornerShape(18.dp),
         color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.55f),
         tonalElevation = 0.dp,
         modifier = Modifier
+            .clickable { isExpanded = true }
             .clip(RoundedCornerShape(18.dp))
             .border(
                 width = 1.dp,
@@ -174,6 +188,54 @@ private fun MessageAttachment(imageUri: String) {
                     )
                     .padding(horizontal = 10.dp, vertical = 4.dp),
             )
+        }
+    }
+
+    if (isExpanded) {
+        Dialog(
+            onDismissRequest = { isExpanded = false },
+            properties = DialogProperties(usePlatformDefaultWidth = false),
+        ) {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(MaterialTheme.colorScheme.scrim.copy(alpha = 0.92f))
+                    .clickable { isExpanded = false }
+                    .padding(20.dp),
+            ) {
+                AsyncImage(
+                    model = imageUri,
+                    contentDescription = stringResource(R.string.cd_message_image_fullscreen),
+                    modifier = Modifier
+                        .align(Alignment.Center)
+                        .fillMaxWidth()
+                        .heightIn(max = 560.dp)
+                        .clip(RoundedCornerShape(24.dp)),
+                    contentScale = ContentScale.Fit,
+                )
+                IconButton(
+                    onClick = { isExpanded = false },
+                    modifier = Modifier.align(Alignment.TopEnd),
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Close,
+                        contentDescription = stringResource(R.string.cd_close_image_viewer),
+                        tint = MaterialTheme.colorScheme.onSurface,
+                    )
+                }
+                Text(
+                    text = stringResource(R.string.chat_image_viewer_hint),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier
+                        .align(Alignment.BottomCenter)
+                        .background(
+                            color = MaterialTheme.colorScheme.surface.copy(alpha = 0.82f),
+                            shape = RoundedCornerShape(999.dp),
+                        )
+                        .padding(horizontal = 12.dp, vertical = 6.dp),
+                )
+            }
         }
     }
 }
