@@ -45,7 +45,7 @@ import com.aurachat.R
 
 @Composable
 fun HomeScreen(
-    onNavigateToChat: (sessionId: Long) -> Unit,
+    onNavigateToChat: (sessionId: Long, initialPrompt: String?) -> Unit,
     viewModel: HomeViewModel = hiltViewModel(),
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
@@ -55,7 +55,7 @@ fun HomeScreen(
     LaunchedEffect(uiState.navigateToSessionId) {
         val sessionId = uiState.navigateToSessionId
         if (sessionId != null) {
-            onNavigateToChat(sessionId)
+            onNavigateToChat(sessionId, uiState.navigateToInitialPrompt)
             viewModel.onNavigationConsumed()
         }
     }

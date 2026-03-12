@@ -43,6 +43,7 @@ class ChatViewModel @Inject constructor(
 
     init {
         observeMessages()
+        consumeInitialPrompt(savedStateHandle)
     }
 
     // ── Message observation ───────────────────────────────────────────────────
@@ -62,6 +63,14 @@ class ChatViewModel @Inject constructor(
                 Timber.e(e, "Error observing messages for sessionId=%d", sessionId)
             }
             .launchIn(viewModelScope)
+    }
+
+    private fun consumeInitialPrompt(savedStateHandle: SavedStateHandle) {
+        val initialPrompt = savedStateHandle.remove<String>("initialPrompt")?.trim()
+        if (!initialPrompt.isNullOrBlank()) {
+            Timber.d("Consuming initial prompt for sessionId=%d", sessionId)
+            startSend(initialPrompt, imageUri = null)
+        }
     }
 
     // ── User interactions ─────────────────────────────────────────────────────

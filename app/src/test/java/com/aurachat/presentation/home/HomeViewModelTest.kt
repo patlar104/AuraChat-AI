@@ -46,6 +46,7 @@ class HomeViewModelTest {
             val state = awaitItem()
             assertEquals("", state.inputText)
             assertNull(state.navigateToSessionId)
+            assertNull(state.navigateToInitialPrompt)
             assertFalse(state.isCreatingSession)
             assertNull(state.errorMessage)
         }
@@ -88,6 +89,7 @@ class HomeViewModelTest {
             val completedState = awaitItem()
             assertFalse(completedState.isCreatingSession)
             assertEquals(expectedSessionId, completedState.navigateToSessionId)
+            assertEquals("Test message", completedState.navigateToInitialPrompt)
             assertEquals("", completedState.inputText)
             assertNull(completedState.errorMessage)
         }
@@ -156,6 +158,7 @@ class HomeViewModelTest {
             // Should only emit the completion of first session
             val completedState = awaitItem()
             assertEquals(123L, completedState.navigateToSessionId)
+            assertEquals("First message", completedState.navigateToInitialPrompt)
             assertEquals("", completedState.inputText)
 
             expectNoEvents()
@@ -212,6 +215,7 @@ class HomeViewModelTest {
             val completedState = awaitItem()
             assertFalse(completedState.isCreatingSession)
             assertEquals(expectedSessionId, completedState.navigateToSessionId)
+            assertEquals("What is AI?", completedState.navigateToInitialPrompt)
             assertEquals("", completedState.inputText)
         }
 
@@ -281,10 +285,12 @@ class HomeViewModelTest {
             advanceUntilIdle()
             val stateWithNav = awaitItem()
             assertEquals(expectedSessionId, stateWithNav.navigateToSessionId)
+            assertEquals("Test", stateWithNav.navigateToInitialPrompt)
 
             viewModel.onNavigationConsumed()
             val stateAfterConsume = awaitItem()
             assertNull(stateAfterConsume.navigateToSessionId)
+            assertNull(stateAfterConsume.navigateToInitialPrompt)
         }
     }
 
@@ -390,6 +396,7 @@ class HomeViewModelTest {
             advanceUntilIdle()
             val successState = awaitItem()
             assertEquals(123L, successState.navigateToSessionId)
+            assertEquals("Test", successState.navigateToInitialPrompt)
             assertEquals("", successState.inputText)
             assertNull(successState.errorMessage)
         }

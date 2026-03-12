@@ -4,6 +4,8 @@ data class HomeUiState(
     val inputText: String = "",
     /** Non-null while a navigation to chat is pending. Reset via onNavigationConsumed(). */
     val navigateToSessionId: Long? = null,
+    /** First prompt to send immediately after navigation to the new chat session. */
+    val navigateToInitialPrompt: String? = null,
     /** True while CreateSessionUseCase is in-flight — prevents re-entrant taps. */
     val isCreatingSession: Boolean = false,
     /** Non-null when session creation failed. Reset via onErrorDismissed(). */

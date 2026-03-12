@@ -82,7 +82,7 @@ class HomeViewModel @Inject constructor(
      */
     fun onNavigationConsumed() {
         Timber.d("Navigation event consumed")
-        _uiState.update { it.copy(navigateToSessionId = null) }
+        _uiState.update { it.copy(navigateToSessionId = null, navigateToInitialPrompt = null) }
     }
 
     /**
@@ -107,6 +107,7 @@ class HomeViewModel @Inject constructor(
                     it.copy(
                         isCreatingSession = false,
                         navigateToSessionId = sessionId,
+                        navigateToInitialPrompt = title,
                         inputText = "",
                     )
                 }

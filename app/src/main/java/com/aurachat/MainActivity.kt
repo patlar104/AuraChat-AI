@@ -1,5 +1,6 @@
 package com.aurachat
 
+import android.net.Uri
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -49,13 +50,18 @@ import kotlinx.coroutines.launch
 object NavRoutes {
     /** Route for the home/start screen. */
     const val HOME = "home"
-    /** Route template for a chat session screen; requires a `sessionId` Long argument. */
-    const val CHAT = "chat/{sessionId}"
+    /** Route template for a chat session screen; accepts an optional initial prompt. */
+    const val CHAT = "chat/{sessionId}?initialPrompt={initialPrompt}"
     /** Route for the settings screen. */
     const val SETTINGS = "settings"
 
     /** Builds a fully-resolved chat route for [sessionId]. */
-    fun chat(sessionId: Long) = "chat/$sessionId"
+    fun chat(sessionId: Long, initialPrompt: String? = null): String =
+        if (initialPrompt.isNullOrBlank()) {
+            "chat/$sessionId"
+        } else {
+            "chat/$sessionId?initialPrompt=${Uri.encode(initialPrompt)}"
+        }
 }
 
 /**
@@ -152,8 +158,8 @@ class MainActivity : ComponentActivity() {
                         ) {
                             composable(NavRoutes.HOME) {
                                 HomeScreen(
-                                    onNavigateToChat = { sessionId ->
-                                        navController.navigate(NavRoutes.chat(sessionId))
+                                    onNavigateToChat = { sessionId, initialPrompt ->
+                                        navController.navigate(NavRoutes.chat(sessionId, initialPrompt))
                                     },
                                 )
                             }
@@ -161,6 +167,11 @@ class MainActivity : ComponentActivity() {
                                 route = NavRoutes.CHAT,
                                 arguments = listOf(
                                     navArgument("sessionId") { type = NavType.LongType },
+                                    navArgument("initialPrompt") {
+                                        type = NavType.StringType
+                                        nullable = true
+                                        defaultValue = null
+                                    },
                                 ),
                             ) {
                                 // sessionId is automatically injected into ChatViewModel

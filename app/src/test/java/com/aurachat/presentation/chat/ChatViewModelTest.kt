@@ -715,4 +715,28 @@ class ChatViewModelTest {
             assertNull(completedState.streamingText)
         }
     }
+
+    @Test
+    fun `initialPrompt auto-sends when provided in SavedStateHandle`() = runTest {
+        savedStateHandle = SavedStateHandle(
+            mapOf(
+                "sessionId" to testSessionId,
+                "initialPrompt" to "Hello from home",
+            )
+        )
+        coEvery { sendMessageUseCase(testSessionId, "Hello from home", null) } returns flowOf("Hi there!")
+
+        viewModel = createViewModel()
+        advanceUntilIdle()
+
+        viewModel.uiState.test {
+            val state = awaitItem()
+            assertFalse(state.isStreaming)
+            assertNull(state.streamingText)
+            assertEquals("", state.inputText)
+            assertNull(savedStateHandle.get<String>("initialPrompt"))
+        }
+
+        coVerify(exactly = 1) { sendMessageUseCase(testSessionId, "Hello from home", null) }
+    }
 }
