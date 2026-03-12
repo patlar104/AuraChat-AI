@@ -3,6 +3,7 @@ import java.util.Properties
 
 plugins {
 	alias(libs.plugins.android.application)
+	alias(libs.plugins.android.compose.screenshot)
 	alias(libs.plugins.android.junit5)
 	alias(libs.plugins.kotlin.compose)
 	alias(libs.plugins.kotlin.serialization)
@@ -54,8 +55,8 @@ android {
 	}
 
 	compileOptions {
-		sourceCompatibility = JavaVersion.VERSION_11
-		targetCompatibility = JavaVersion.VERSION_11
+		sourceCompatibility = JavaVersion.VERSION_17
+		targetCompatibility = JavaVersion.VERSION_17
 	}
 
 	buildFeatures {
@@ -68,11 +69,13 @@ android {
 			it.useJUnitPlatform()
 		}
 	}
+
+	experimentalProperties["android.experimental.enableScreenshotTest"] = true
 }
 
 // Project-level Kotlin toolchain — must be at top-level (Project receiver), not inside android {}
 kotlin {
-	jvmToolchain(11)
+	jvmToolchain(17)
 }
 
 ksp {
@@ -146,6 +149,10 @@ dependencies {
 	androidTestImplementation(libs.kotlinx.coroutines.test)
 	androidTestImplementation(platform(libs.androidx.compose.bom))
 	androidTestImplementation(libs.androidx.compose.ui.test.junit4)
+	screenshotTestImplementation(platform(libs.androidx.compose.bom))
+	screenshotTestImplementation(libs.androidx.compose.ui.tooling)
+	screenshotTestImplementation(libs.androidx.compose.ui.test)
+	screenshotTestImplementation(libs.screenshot.validation.api)
 	debugImplementation(libs.androidx.compose.ui.tooling)
 	debugImplementation(libs.androidx.compose.ui.test.manifest)
 }

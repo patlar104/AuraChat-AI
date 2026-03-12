@@ -133,6 +133,7 @@ private fun ModelRadioRow(
         RadioButton(
             selected = selected,
             onClick = onClick,
+            modifier = Modifier.testTag(TestTags.Settings.MODEL_RADIO_PREFIX + modelName),
             colors = RadioButtonDefaults.colors(
                 selectedColor = MaterialTheme.colorScheme.primary,
             ),

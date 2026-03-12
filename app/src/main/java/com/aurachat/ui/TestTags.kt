@@ -25,5 +25,6 @@ object TestTags {
     object Settings {
         const val GITHUB_BUTTON = "settings_github_button"
         const val MODEL_ROW_PREFIX = "settings_model_row_"
+        const val MODEL_RADIO_PREFIX = "settings_model_radio_"
     }
 }

@@ -70,7 +70,9 @@ class MainActivity : ComponentActivity() {
                                 onNavigateToSession = { sessionId ->
                                     scope.launch {
                                         drawerState.close()
-                                        navController.navigate(ChatRoute(sessionId))
+                                        navController.navigate(ChatRoute(sessionId)) {
+                                            launchSingleTop = true
+                                        }
                                     }
                                 },
                             )
@@ -98,7 +100,9 @@ class MainActivity : ComponentActivity() {
                                 },
                                 actions = {
                                     IconButton(onClick = {
-                                        navController.navigate(SettingsRoute)
+                                        navController.navigate(SettingsRoute) {
+                                            launchSingleTop = true
+                                        }
                                     }) {
                                         Icon(
                                             imageVector = Icons.Default.Settings,
@@ -136,7 +140,9 @@ class MainActivity : ComponentActivity() {
                             composable<HomeRoute> {
                                 HomeScreen(
                                     onNavigateToChat = { sessionId ->
-                                        navController.navigate(ChatRoute(sessionId))
+                                        navController.navigate(ChatRoute(sessionId)) {
+                                            launchSingleTop = true
+                                        }
                                     },
                                 )
                             }

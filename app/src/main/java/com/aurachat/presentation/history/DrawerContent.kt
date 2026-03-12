@@ -69,6 +69,7 @@ fun DrawerContent(
     uiState: HistoryUiState,
     onNavigateToSession: (Long) -> Unit,
     onDeleteSession: (Long) -> Unit,
+    formatUpdatedAt: (Long) -> String = ::formatRelativeTime,
 ) {
     LazyColumn(
         modifier = Modifier
@@ -103,6 +104,7 @@ fun DrawerContent(
                 session = session,
                 onDelete = { onDeleteSession(session.id) },
                 onClick = { onNavigateToSession(session.id) },
+                formatUpdatedAt = formatUpdatedAt,
             )
         }
     }
@@ -114,6 +116,7 @@ private fun SwipeToDeleteSessionItem(
     session: ChatSession,
     onDelete: () -> Unit,
     onClick: () -> Unit,
+    formatUpdatedAt: (Long) -> String,
 ) {
     val dismissState = rememberSwipeToDismissBoxState()
 
@@ -170,6 +173,7 @@ private fun SwipeToDeleteSessionItem(
         SessionListItem(
             session = session,
             onClick = onClick,
+            formatUpdatedAt = formatUpdatedAt,
         )
     }
 }
@@ -178,6 +182,7 @@ private fun SwipeToDeleteSessionItem(
 private fun SessionListItem(
     session: ChatSession,
     onClick: () -> Unit,
+    formatUpdatedAt: (Long) -> String,
     modifier: Modifier = Modifier,
 ) {
     Column(
@@ -203,7 +208,7 @@ private fun SessionListItem(
                 overflow = TextOverflow.Ellipsis,
             )
             Text(
-                text = formatRelativeTime(session.updatedAt),
+                text = formatUpdatedAt(session.updatedAt),
                 style = MaterialTheme.typography.labelSmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
