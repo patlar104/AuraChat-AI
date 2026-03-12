@@ -5,6 +5,7 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -202,8 +203,8 @@ private fun ImagePreviewStrip(
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .background(MaterialTheme.colorScheme.surfaceVariant)
-            .padding(horizontal = 12.dp, vertical = 6.dp),
+            .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.96f))
+            .padding(horizontal = 12.dp, vertical = 10.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Box {
@@ -211,8 +212,13 @@ private fun ImagePreviewStrip(
                 model = uri,
                 contentDescription = stringResource(R.string.cd_image_preview),
                 modifier = Modifier
-                    .size(72.dp)
-                    .clip(RoundedCornerShape(8.dp)),
+                    .size(76.dp)
+                    .clip(RoundedCornerShape(16.dp))
+                    .border(
+                        width = 1.dp,
+                        color = MaterialTheme.colorScheme.outline.copy(alpha = 0.22f),
+                        shape = RoundedCornerShape(16.dp),
+                    ),
                 contentScale = ContentScale.Crop,
             )
             // Clear button overlaid on the top-right corner of the thumbnail
@@ -236,11 +242,18 @@ private fun ImagePreviewStrip(
             }
         }
         Spacer(Modifier.width(8.dp))
-        Text(
-            text = stringResource(R.string.chat_image_attached),
-            style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-        )
+        Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+            Text(
+                text = stringResource(R.string.chat_image_ready_title),
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurface,
+            )
+            Text(
+                text = stringResource(R.string.chat_image_ready_subtitle),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
     }
 }
 

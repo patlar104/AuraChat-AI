@@ -37,6 +37,7 @@ class SendMessageUseCase @Inject constructor(
         sessionId: Long,
         userPrompt: String,
         imageBitmap: Bitmap? = null,
+        imageUri: String? = null,
     ): Flow<String> = flow {
         Timber.d("SendMessageUseCase invoked for sessionId=$sessionId, hasImage=${imageBitmap != null}, prompt=${userPrompt.take(30)}...")
 
@@ -60,6 +61,7 @@ class SendMessageUseCase @Inject constructor(
                 ChatMessage(
                     sessionId = sessionId,
                     content = userPrompt,
+                    imageUri = imageUri,
                     role = MessageRole.USER,
                     timestamp = now,
                 )

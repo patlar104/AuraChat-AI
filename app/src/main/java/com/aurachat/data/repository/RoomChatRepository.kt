@@ -73,11 +73,16 @@ class RoomChatRepository @Inject constructor(
         // Sync denormalized session metadata so the drawer list stays up-to-date
         val session = sessionDao.getSessionById(message.sessionId)
         if (session != null) {
+            val preview = when {
+                message.imageUri.isNullOrBlank() -> message.content
+                message.content.isBlank() -> "Image"
+                else -> "Image: ${message.content}"
+            }
             sessionDao.updateSession(
                 session.copy(
                     updatedAt = message.timestamp,
                     messageCount = messageDao.countMessages(message.sessionId),
-                    lastMessagePreview = message.content.take(Constants.Session.MAX_PREVIEW_LENGTH),
+                    lastMessagePreview = preview.take(Constants.Session.MAX_PREVIEW_LENGTH),
                 ),
             )
         }

@@ -2,18 +2,16 @@ package com.aurachat.presentation.chat
 
 import android.content.Context
 import android.graphics.Bitmap
-import android.graphics.BitmapFactory
 import android.net.Uri
-import android.os.Build
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.aurachat.domain.usecase.ConsumePendingInitialPromptUseCase
 import com.aurachat.domain.usecase.GetMessagesUseCase
 import com.aurachat.domain.usecase.SendMessageUseCase
+import com.aurachat.util.ImageAttachmentStore
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -23,7 +21,6 @@ import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
 import timber.log.Timber
 import javax.inject.Inject
 
@@ -111,38 +108,33 @@ class ChatViewModel @Inject constructor(
         sendJob = viewModelScope.launch {
             _uiState.update { state ->
                 state.copy(
-                    inputText = "",
-                    pendingImageUri = null,
                     isStreaming = true,
-                    streamingText = "",
+                    streamingText = null,
                     errorMessage = null,
+                    lastFailedPrompt = null,
+                    lastFailedImageUri = null,
                 )
             }
 
-            // Decode the selected image to a Bitmap on IO dispatcher
-            val bitmap: Bitmap? = imageUri?.let { uri ->
-                withContext(Dispatchers.IO) {
-                    try {
-                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
-                            val source = android.graphics.ImageDecoder.createSource(context.contentResolver, uri)
-                            android.graphics.ImageDecoder.decodeBitmap(source) { decoder, _, _ ->
-                                decoder.isMutableRequired = true
-                            }
-                        } else {
-                            @Suppress("DEPRECATION")
-                            context.contentResolver.openInputStream(uri)?.use { stream ->
-                                BitmapFactory.decodeStream(stream)
-                            }
-                        }
-                    } catch (e: Exception) {
-                        Timber.w(e, "Failed to decode selected image — sending text only")
-                        null
-                    }
-                }
-            }
-
             try {
-                sendMessage(sessionId, prompt, bitmap).collect { chunk ->
+                val preparedAttachment = imageUri?.let { selectedUri ->
+                    prepareAttachment(selectedUri)
+                }
+
+                _uiState.update { state ->
+                    state.copy(
+                        inputText = "",
+                        pendingImageUri = null,
+                        streamingText = "",
+                    )
+                }
+
+                sendMessage(
+                    sessionId = sessionId,
+                    userPrompt = prompt,
+                    imageBitmap = preparedAttachment?.bitmap,
+                    imageUri = preparedAttachment?.storedImageUri,
+                ).collect { chunk ->
                     _uiState.update { state ->
                         state.copy(streamingText = (state.streamingText ?: "") + chunk)
                     }
@@ -163,6 +155,7 @@ class ChatViewModel @Inject constructor(
                         streamingText = null,
                         errorMessage = e.message ?: "Something went wrong. Please try again.",
                         inputText = prompt,
+                        pendingImageUri = imageUri,
                         lastFailedPrompt = prompt,
                         lastFailedImageUri = imageUri,
                     )
@@ -170,4 +163,19 @@ class ChatViewModel @Inject constructor(
             }
         }
     }
+
+    private suspend fun prepareAttachment(sourceUri: Uri): PreparedAttachment {
+        val storedImageUri = ImageAttachmentStore.importSelectedImage(context, sourceUri)
+        val bitmap = ImageAttachmentStore.decodeBitmap(context, storedImageUri)
+            ?: error("Couldn't prepare that image. Try a different photo.")
+        return PreparedAttachment(
+            storedImageUri = storedImageUri,
+            bitmap = bitmap,
+        )
+    }
+
+    private data class PreparedAttachment(
+        val storedImageUri: String,
+        val bitmap: Bitmap,
+    )
 }

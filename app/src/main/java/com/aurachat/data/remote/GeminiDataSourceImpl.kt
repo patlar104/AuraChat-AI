@@ -99,7 +99,14 @@ class GeminiDataSourceImpl @Inject constructor(
             .takeLast(Constants.Gemini.HISTORY_LIMIT)
             .map { msg ->
                 content(role = if (msg.role == MessageRole.USER) "user" else "model") {
-                    text(msg.content)
+                    val historyText = buildString {
+                        if (!msg.imageUri.isNullOrBlank()) {
+                            append("[Image attached]")
+                            if (msg.content.isNotBlank()) append('\n')
+                        }
+                        append(msg.content)
+                    }
+                    text(historyText)
                 }
             }
 }

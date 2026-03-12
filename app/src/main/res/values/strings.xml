@@ -24,6 +24,8 @@
 
     <!-- Chat image attachment -->
     <string name="chat_image_attached">Image attached</string>
+    <string name="chat_image_ready_title">Image ready to send</string>
+    <string name="chat_image_ready_subtitle">Add a prompt and AuraChat will send both together.</string>
 
     <!-- Settings Screen -->
     <string name="settings_model_title">AI Model</string>
@@ -40,6 +42,7 @@
     <string name="cd_delete_session">Delete conversation</string>
     <string name="cd_attach_image">Attach image</string>
     <string name="cd_image_preview">Selected image preview</string>
+    <string name="cd_message_image">Attached message image</string>
     <string name="cd_clear_image">Remove image</string>
 
     <!-- Error Messages -->

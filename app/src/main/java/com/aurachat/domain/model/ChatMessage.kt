@@ -14,6 +14,7 @@ enum class MessageRole { USER, MODEL }
  * @property id Unique database-generated identifier. Defaults to 0 before persistence.
  * @property sessionId The ID of the [ChatSession] this message belongs to.
  * @property content The text body of the message.
+ * @property imageUri Optional local URI for an image the user attached to this message.
  * @property role Whether the message was authored by the user or the AI model.
  * @property timestamp Unix epoch milliseconds when the message was created.
  * @property isStreaming Runtime-only flag indicating the AI is still generating this message.
@@ -25,6 +26,7 @@ data class ChatMessage(
     val id: Long = 0L,
     val sessionId: Long,
     val content: String,
+    val imageUri: String? = null,
     val role: MessageRole,
     val timestamp: Long,
     val isStreaming: Boolean = false,

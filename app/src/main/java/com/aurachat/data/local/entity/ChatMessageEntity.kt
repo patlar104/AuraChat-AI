@@ -46,6 +46,9 @@ data class ChatMessageEntity(
     @ColumnInfo(name = "content")
     val content: String,
 
+    @ColumnInfo(name = "image_uri")
+    val imageUri: String? = null,
+
     /** Stored as the enum name (`"USER"` or `"MODEL"`); reconstructed via [MessageRole.valueOf]. */
     @ColumnInfo(name = "role")
     val role: String,
@@ -62,6 +65,7 @@ fun ChatMessageEntity.toDomain() = ChatMessage(
     id = id,
     sessionId = sessionId,
     content = content,
+    imageUri = imageUri,
     role = MessageRole.valueOf(role),
     timestamp = timestamp,
     isStreaming = false,
@@ -73,6 +77,7 @@ fun ChatMessage.toEntity() = ChatMessageEntity(
     id = id,
     sessionId = sessionId,
     content = content,
+    imageUri = imageUri,
     role = role.name,
     timestamp = timestamp,
     isError = isError,

@@ -6,27 +6,36 @@ import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
+import androidx.compose.foundation.border
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.sizeIn
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import coil.compose.AsyncImage
+import com.aurachat.R
 import com.aurachat.domain.model.ChatMessage
 import com.aurachat.domain.model.MessageRole
 import java.text.SimpleDateFormat
@@ -73,30 +82,40 @@ fun MessageBubble(message: ChatMessage) {
                 )
                 .padding(horizontal = 14.dp, vertical = 10.dp),
         ) {
+            val hasImage = !message.imageUri.isNullOrBlank()
+
             // Streaming started but no content yet — show animated typing indicator
-            if (!isUser && message.isStreaming && message.content.isEmpty()) {
+            if (!isUser && message.isStreaming && message.content.isEmpty() && !hasImage) {
                 TypingIndicator()
             } else {
-                Row(verticalAlignment = Alignment.Bottom) {
-                    if (isUser || message.isError) {
-                        // User messages and error text use plain Text — no markdown needed
-                        Text(
-                            text = message.content,
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = if (message.isError)
-                                MaterialTheme.colorScheme.error
-                            else
-                                MaterialTheme.colorScheme.onBackground,  // #E8EAED
-                        )
-                    } else {
-                        // Model responses render markdown: bold, italic, code blocks, bullets
-                        MarkdownText(
-                            text = message.content,
-                            modifier = Modifier.weight(1f, fill = false),
-                        )
+                Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                    if (hasImage) {
+                        MessageAttachment(imageUri = requireNotNull(message.imageUri))
                     }
-                    if (message.isStreaming) {
-                        StreamingCursor()
+
+                    if (message.content.isNotEmpty() || message.isStreaming) {
+                        Row(verticalAlignment = Alignment.Bottom) {
+                            if (isUser || message.isError) {
+                                // User messages and error text use plain Text — no markdown needed
+                                Text(
+                                    text = message.content,
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    color = if (message.isError)
+                                        MaterialTheme.colorScheme.error
+                                    else
+                                        MaterialTheme.colorScheme.onBackground,  // #E8EAED
+                                )
+                            } else {
+                                // Model responses render markdown: bold, italic, code blocks, bullets
+                                MarkdownText(
+                                    text = message.content,
+                                    modifier = Modifier.weight(1f, fill = false),
+                                )
+                            }
+                            if (message.isStreaming) {
+                                StreamingCursor()
+                            }
+                        }
                     }
                 }
             }
@@ -113,6 +132,47 @@ fun MessageBubble(message: ChatMessage) {
                     end = if (isUser) 4.dp else 0.dp,
                     top = 2.dp,
                 ),
+            )
+        }
+    }
+}
+
+@Composable
+private fun MessageAttachment(imageUri: String) {
+    Surface(
+        shape = RoundedCornerShape(18.dp),
+        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.55f),
+        tonalElevation = 0.dp,
+        modifier = Modifier
+            .clip(RoundedCornerShape(18.dp))
+            .border(
+                width = 1.dp,
+                color = MaterialTheme.colorScheme.outline.copy(alpha = 0.22f),
+                shape = RoundedCornerShape(18.dp),
+            ),
+    ) {
+        Box(modifier = Modifier.padding(4.dp)) {
+            AsyncImage(
+                model = imageUri,
+                contentDescription = stringResource(R.string.cd_message_image),
+                modifier = Modifier
+                    .sizeIn(minWidth = 180.dp, maxWidth = 240.dp)
+                    .heightIn(min = 132.dp, max = 220.dp)
+                    .clip(RoundedCornerShape(14.dp)),
+                contentScale = ContentScale.Crop,
+            )
+            Text(
+                text = stringResource(R.string.chat_image_attached),
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onSurface,
+                modifier = Modifier
+                    .align(Alignment.BottomStart)
+                    .padding(10.dp)
+                    .background(
+                        color = MaterialTheme.colorScheme.surface.copy(alpha = 0.82f),
+                        shape = RoundedCornerShape(999.dp),
+                    )
+                    .padding(horizontal = 10.dp, vertical = 4.dp),
             )
         }
     }
